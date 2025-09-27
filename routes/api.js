@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const UserController = require("../controllers/UserController");
-const CreateTaiKhoanBenhNhanRequest = require("../requests/CreateTaiKhoanBenhNhanRequest");
+const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const validateRequest = require("../middlewares/validateRequest");
 
 router.post(
-  "/benh-nhan/register",
-  CreateTaiKhoanBenhNhanRequest,
+  "/register",
+  CreateTaiKhoanRequest,
   validateRequest,
   UserController.register
 );

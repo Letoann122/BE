@@ -1,32 +1,68 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
+
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      // Nếu sau này có quan hệ với bảng khác thì thêm ở đây
     }
   }
-  User.init({
-    full_name: DataTypes.STRING,
-    birthday: DataTypes.DATE,
-    gender: DataTypes.STRING,
-    phone: DataTypes.STRING,
-    email: DataTypes.STRING,
-    address: DataTypes.STRING,
-    blood_group: DataTypes.STRING,
-    role: DataTypes.STRING,
-    medical_history: DataTypes.STRING,
-    password: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'User',
-  });
+
+  User.init(
+    {
+      full_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+      },
+      birthday: {
+        type: DataTypes.DATEONLY,
+        allowNull: false
+      },
+      gender: {
+        type: DataTypes.ENUM("Nam", "Nữ", "Khác"),
+        allowNull: false
+      },
+      phone: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        unique: true
+      },
+      email: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        unique: true,
+        validate: {
+          isEmail: true
+        }
+      },
+      address: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+      },
+      blood_group: {
+        type: DataTypes.ENUM("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"),
+        allowNull: false
+      },
+      role: {
+        type: DataTypes.ENUM("donor", "admin", "doctor"),
+        allowNull: false,
+        defaultValue: "donor"
+      },
+      medical_history: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      password: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+      }
+    },
+    {
+      sequelize,
+      modelName: "User",
+      tableName: "users"
+    }
+  );
+
   return User;
 };
