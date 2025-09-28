@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const app = express();
-
+const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 app.use(cors({
@@ -9,6 +9,8 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+
+app.use(cookieParser());
 // middleware đọc JSON
 app.use(express.json());
 
