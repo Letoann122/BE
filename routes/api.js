@@ -25,7 +25,7 @@ router.get("/logout",
   UserController.logout);
 
 
-
+router.post("/forgot-password",)
 
 
 module.exports = router;

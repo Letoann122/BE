@@ -149,13 +149,18 @@ const UserController = {
 },
 
 async forgotPassword(req, res) {
+  const{email} = req.body;
+  if (!email) throw new Error("Email is required");
+  const user = await User.findOne({ where: { email } });
+  if (!user) throw new Error("User not found");
+
 const transporter = nodemailer.createTransport({
-  host: "smtp.ethereal.email",
+  host: "smtp.gmail.com",
   port: 587,
   secure: false, // true for 465, false for other ports
   auth: {
-    user: "maddison53@ethereal.email",
-    pass: "jn7jnAPss4f63QBp6D",
+    user: process.env.EMAIL_SERVICE, // generated ethereal user
+    pass: process.env.EMAIL_PASSWORD, // generated ethereal password
   },
 });
 
@@ -163,10 +168,10 @@ const transporter = nodemailer.createTransport({
 (async () => {
   const info = await transporter.sendMail({
     from: '"Maddison Foo Koch" <maddison53@ethereal.email>',
-    to: "bar@example.com, baz@example.com",
-    subject: "Hello ✔",
-    text: "Hello world?", // plain‑text body
-    html: "<b>Hello world?</b>", // HTML body
+    to: email,
+    subject: "Forgot Password",
+    // text: "Hello world?", // plain‑text body
+    html: "<b>Click To Change The Password. <a href =${process.evn.URL_SERVER}>Click hear</a></b>", // HTML body
   });
 
   console.log("Message sent:", info.messageId);

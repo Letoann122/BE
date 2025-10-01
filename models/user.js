@@ -63,6 +63,8 @@ module.exports = (sequelize, DataTypes) => {
       tableName: "users"
     }
   );
-
+  userSchema.methods ={
+    createPassword
+  }
   return User;
 };
