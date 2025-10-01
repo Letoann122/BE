@@ -5,6 +5,10 @@ const dotenv = require("dotenv");
 const { validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const crypto = require("crypto");
+const {Op} = require("sequelize");
+
+const db = require("../models");
 dotenv.config();
 
 const UserController = {
@@ -148,36 +152,149 @@ const UserController = {
   }
 },
 
+
 async forgotPassword(req, res) {
-  const{email} = req.body;
-  if (!email) throw new Error("Email is required");
-  const user = await User.findOne({ where: { email } });
-  if (!user) throw new Error("User not found");
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_SERVICE, // generated ethereal user
-    pass: process.env.EMAIL_PASSWORD, // generated ethereal password
+    const { email } = req.body;
+    
+    try {
+      // 1. Tìm kiếm User bằng email
+      const user = await User.findOne({ where: { email } });
+
+      if (!user) {
+        // Trả về thành công giả để tránh leak thông tin user nào tồn tại
+        return res.json({
+          status: true,
+          message: "Nếu email tồn tại, link reset mật khẩu đã được gửi.",
+        });
+      }
+
+      // 2. Tạo Reset Token
+      
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      // Hash token để lưu vào database (vì lý do bảo mật)
+      const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+      const resetTokenExpiry = Date.now() + 3600000; // Hết hạn sau 1 giờ
+
+      // 3. Lưu Token vào Database
+      user.resetPasswordToken = resetTokenHash;
+      user.resetPasswordExpires = resetTokenExpiry;
+      await user.save();
+
+      // 4. Cấu hình và Gửi Email
+      const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false, // true cho port 465, false cho các port khác
+        auth: {
+          user: process.env.EMAIL_SERVICE,
+          pass: process.env.EMAIL_PASSWORD, // Mật khẩu ứng dụng của Gmail
+        },
+      });
+
+      const resetUrl = `${process.env.URL_SERVER}/reset-password?token=${resetToken}`;
+      
+      await transporter.sendMail({
+        from: '"Hệ thống Hỗ trợ" <support@yourdomain.com>',
+        to: email,
+        subject: "Yêu cầu Đặt lại Mật khẩu",
+        html: `
+          <p>Xin chào ${user.full_name},</p>
+          <p>Bạn đã yêu cầu đặt lại mật khẩu. Vui lòng nhấp vào liên kết dưới đây để hoàn tất:</p>
+          <p><a href="${resetUrl}"><b>ĐẶT LẠI MẬT KHẨU CỦA TÔI</b></a></p>
+          <p>Liên kết này sẽ hết hạn sau 1 giờ. Nếu bạn không yêu cầu thay đổi mật khẩu, vui lòng bỏ qua email này.</p>
+        `,
+      });
+
+      // 5. Phản hồi thành công
+      return res.json({
+        status: true,
+        message: "Link đặt lại mật khẩu đã được gửi đến email của bạn.",
+      });
+      
+    } catch (error) {
+      console.error("Lỗi Quên Mật Khẩu:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Lỗi hệ thống khi xử lý yêu cầu quên mật khẩu.",
+        error: error.message,
+      });
+    }
   },
-});
+  
 
-// Wrap in an async IIFE so we can use await.
-(async () => {
-  const info = await transporter.sendMail({
-    from: '"Maddison Foo Koch" <maddison53@ethereal.email>',
-    to: email,
-    subject: "Forgot Password",
-    // text: "Hello world?", // plain‑text body
-    html: "<b>Click To Change The Password. <a href =${process.evn.URL_SERVER}>Click hear</a></b>", // HTML body
-  });
+  // ... (Tiếp tục trong object ResetPasswordController)
 
-  console.log("Message sent:", info.messageId);
-})();
-}
+async resetPassword(req, res) {
+    const { token, newPassword } = req.body;
 
+    // 1. Hash token nhận được từ request (req.body)
+   
+    const resetTokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    try {
+        // 2. Tìm User bằng token đã hash VÀ kiểm tra token còn hạn (chưa hết giờ)
+        const user = await User.findOne({ 
+            where: { 
+                resetPasswordToken: resetTokenHash,
+                resetPasswordExpires: {
+                    [Op.gt]: Date.now() // So sánh lớn hơn thời gian hiện tại
+                }
+            } 
+        });
+
+        if (!user) {
+            // Token không hợp lệ hoặc đã hết hạn
+            return res.status(400).json({
+                status: false,
+                message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.",
+            });
+        }
+
+        // 3. Hash mật khẩu mới
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // 4. Cập nhật mật khẩu và xóa token/thời hạn khỏi DB
+        user.password = hashedPassword;
+        user.resetPasswordToken = null; // Xóa token
+        user.resetPasswordExpires = null; // Xóa thời hạn
+        await user.save();
+
+        // 5. Phản hồi thành công
+        return res.json({
+            status: true,
+            message: "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.",
+        });
+
+    } catch (error) {
+        console.error("Lỗi đặt lại mật khẩu:", error);
+        return res.status(500).json({
+            status: false,
+            message: "Lỗi hệ thống khi đặt lại mật khẩu.",
+            error: error.message,
+        });
+    }
+},
+
+
+  async logout(req, res) {
+    try {
+      // Xoá cookie token
+      res.clearCookie("token", { httpOnly: true });
+
+      return res.json({
+        status: true,
+        message: "Đăng xuất thành công!",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Đăng xuất thất bại!",
+        error: error.message,
+      });
+    }
+  },
 };
 
 module.exports = UserController;
