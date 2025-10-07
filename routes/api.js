@@ -36,17 +36,9 @@ router.get("/logout",
   UserController.logout);
 
 
-router.post("/ResetPassword" , ResetPasswordController.hash_reset);
-// router.post("/forgot-password", ResetPasswordController.hash_reset);
+router.post("/forgot-password", ResetPasswordController.forgotPassword);
+router.post("/reset-password", ResetPasswordController.resetPassword);
 
-router.post("/forgot-password", UserController.forgotPassword);
-
-// router.post("/reset-password", UserController.resetPassword);
-router.post("/reset-password",
- 
-  validateRequest,
-  UserController.resetPasswordByToken
-);
 
 
 
