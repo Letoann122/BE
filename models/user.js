@@ -1,11 +1,10 @@
 "use strict";
-const { Model } = require("sequelize");
+const { Model, uuidv4 } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
-      // Thêm các quan hệ nếu có, ví dụ:
-      // User.hasMany(models.Donation, { foreignKey: "user_id" });
+      // Nếu sau này có quan hệ với bảng khác thì thêm ở đây
     }
   }
 
@@ -13,69 +12,75 @@ module.exports = (sequelize, DataTypes) => {
     {
       full_name: {
         type: DataTypes.STRING(255),
-        allowNull: false,
+        allowNull: false
       },
       birthday: {
         type: DataTypes.DATEONLY,
-        allowNull: false,
+        allowNull: false
       },
       gender: {
         type: DataTypes.ENUM("Nam", "Nữ", "Khác"),
-        allowNull: false,
+        allowNull: false
       },
       phone: {
         type: DataTypes.STRING(10),
         allowNull: false,
-        unique: true,
+        unique: true
       },
       email: {
         type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
         validate: {
-          isEmail: true,
-        },
+          isEmail: true
+        }
       },
       address: {
         type: DataTypes.STRING(255),
-        allowNull: false,
+        allowNull: false
       },
       blood_group: {
         type: DataTypes.ENUM("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"),
-        allowNull: false,
+        allowNull: false
       },
       role: {
         type: DataTypes.ENUM("donor", "admin", "doctor"),
         allowNull: false,
-        defaultValue: "donor",
+        defaultValue: "donor"
       },
       medical_history: {
         type: DataTypes.TEXT,
-        allowNull: true,
+        allowNull: true
       },
       password: {
         type: DataTypes.STRING(255),
+        allowNull: false
+      },
+      tinh_trang: {
+        type:  DataTypes.TINYINT,
         allowNull: false,
+        defaultValue: 0,
+        comments: "Trạng thái tài khoản"
       },
-    
-      
-      resetPasswordToken: {
-        // token mã hoá SHA256 để xác minh reset password
-        type: DataTypes.STRING,
+      hash_active: {
+        type: DataTypes.STRING(36),
         allowNull: true,
+        comments: "UUID để kích hoạt tài khoản"
       },
-      resetPasswordExpires: {
-        // thời điểm hết hạn token reset password
-        type: DataTypes.DATE,
-        allowNull: true,
+      reset_token : {
+        type      : DataTypes.STRING,
+        allowNull : true,
       },
+      reset_expires : {
+        type      : DataTypes.DATE,
+        allowNull : true,
+      }
     },
     {
       sequelize,
-      modelName: "User",
-      tableName: "users",
-      timestamps: true, // có createdAt, updatedAt
-      underscored: false, // bạn có thể để true nếu muốn tên cột snake_case
+      modelName   : "User",
+      tableName   : "users"
+      
     }
   );
 
