@@ -63,11 +63,13 @@ module.exports = (sequelize, DataTypes) => {
         // token mã hoá SHA256 để xác minh reset password
         type: DataTypes.STRING,
         allowNull: true,
+           require: false,
       },
       resetPasswordExpires: {
         // thời điểm hết hạn token reset password
         type: DataTypes.DATE,
         allowNull: true,
+        require: false,
       },
     },
     {
