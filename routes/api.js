@@ -1,31 +1,39 @@
 const express = require("express");
 const router = express.Router();
-const UserController = require("../controllers/UserController");
+
+const {
+  RegisterController,
+  ActivateController,
+  LoginController,
+  LogoutController,
+  ForgotPasswordController,
+  ResetPasswordController,
+} = require("../controllers");
+
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const validateRequest = require("../middlewares/validateRequest");
-const { check } = require("express-validator");
 const LoginRequest = require("../middlewares/LoginRequest");
-
-//active_account
-router.get("/activate/:token", UserController.activate);
-//forgot_password
-router.post("/forgot-password", UserController.forgotPassword);
-router.post("/change-password", UserController.resetPassword);
+//kich-hoat
+router.get("/activate/:token", ActivateController.activate);
+//quen-pass
+router.post("/forgot-password", ForgotPasswordController.forgotPassword);
+//doi-pass
+router.post("/change-password", ResetPasswordController.resetPassword);
 //dang-ky
 router.post(
   "/register",
   CreateTaiKhoanRequest,
   validateRequest,
-  UserController.register
+  RegisterController.register
 );
 //dang-nhap
-router.post("/login", 
-LoginRequest,
-validateRequest,
-  UserController.login
+router.post(
+  "/login",
+  LoginRequest,
+  validateRequest,
+  LoginController.login
 );
 //dang-xuat
-router.get("/logout", 
-  UserController.logout);
+router.get("/logout", LogoutController.logout);
 
 module.exports = router;
