@@ -2,14 +2,14 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Thêm cột resetPasswordToken
-    await queryInterface.addColumn('users', 'resetPasswordToken', {
-      type: Sequelize.STRING(255),
+    // thêm reset_token
+    await queryInterface.addColumn("Users", "reset_token", {
+      type: Sequelize.STRING,
       allowNull: true,
     });
-    
-    // Thêm cột resetPasswordExpires
-    await queryInterface.addColumn('users', 'resetPasswordExpires', {
+
+    // thêm reset_expires
+    await queryInterface.addColumn("Users", "reset_expires", {
       type: Sequelize.DATE,
       allowNull: true,
     });
@@ -17,7 +17,7 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     // Logic rollback (xóa cột)
-    await queryInterface.removeColumn('users', 'resetPasswordExpires');
-    await queryInterface.removeColumn('users', 'resetPasswordToken');
+    await queryInterface.removeColumn("Users", "reset_token");
+    await queryInterface.removeColumn("Users", "reset_expires");
   }
 };

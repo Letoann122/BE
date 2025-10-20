@@ -6,40 +6,26 @@ const validateRequest = require("../middlewares/validateRequest");
 const { check } = require("express-validator");
 const LoginRequest = require("../middlewares/LoginRequest");
 
-
-
-const ResetPasswordController = require("../controllers/ResetPassword");
-const nodemailer = require("nodemailer");
-
-// console.log("GIÁ TRỊ CỦA CreateTaiKhoanRequest:", CreateTaiKhoanRequest);
-// console.log("GIÁ TRỊ CỦA validateRequest:", validateRequest);
-// console.log("GIÁ TRỊ CỦA UserController.register:", UserController.register);
-
-
 //active_account
 router.get("/activate/:token", UserController.activate);
+//forgot_password
+router.post("/forgot-password", UserController.forgotPassword);
+router.post("/change-password", UserController.resetPassword);
 //dang-ky
 router.post(
   "/register",
-  ...CreateTaiKhoanRequest,
+  CreateTaiKhoanRequest,
   validateRequest,
   UserController.register
 );
 //dang-nhap
 router.post("/login", 
-...LoginRequest,
+LoginRequest,
 validateRequest,
   UserController.login
 );
 //dang-xuat
 router.get("/logout", 
   UserController.logout);
-
-
-router.post("/forgot-password", ResetPasswordController.forgotPassword);
-router.post("/reset-password", ResetPasswordController.resetPassword);
-
-
-
 
 module.exports = router;
