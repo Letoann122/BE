@@ -40,12 +40,17 @@ const CreateTaiKhoanRequest = [
     .isISO8601().withMessage("Ngày sinh không hợp lệ."),
 
   body("gender")
-    .notEmpty().withMessage("Bạn chưa chọn giới tính.")
-    .isIn(["Nam", "Nữ", "Khác"]).withMessage("Giới tính không hợp lệ."),
+    .notEmpty().withMessage("Bạn chưa chọn giới tính."),
 
   body("address")
     .notEmpty().withMessage("Bạn chưa nhập địa chỉ.")
-    .isLength({ max: 255 }).withMessage("Địa chỉ không được quá 255 ký tự.")
+    .isLength({ max: 255 }).withMessage("Địa chỉ không được quá 255 ký tự."),
+
+  body("blood_group")
+    .notEmpty().withMessage("Vui lòng chọn nhóm máu."),
+
+  body("role")
+    .notEmpty().withMessage("Bạn chưa chọn vai trò."),
 ];
 
 module.exports = CreateTaiKhoanRequest;

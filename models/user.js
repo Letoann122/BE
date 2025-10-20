@@ -1,5 +1,5 @@
 "use strict";
-const { Model } = require("sequelize");
+const { Model, uuidv4 } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
@@ -55,12 +55,32 @@ module.exports = (sequelize, DataTypes) => {
       password: {
         type: DataTypes.STRING(255),
         allowNull: false
+      },
+      tinh_trang: {
+        type:  DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+        comments: "Trạng thái tài khoản"
+      },
+      hash_active: {
+        type: DataTypes.STRING(36),
+        allowNull: true,
+        comments: "UUID để kích hoạt tài khoản"
+      },
+      reset_token : {
+        type      : DataTypes.STRING,
+        allowNull : true,
+      },
+      reset_expires : {
+        type      : DataTypes.DATE,
+        allowNull : true,
       }
     },
     {
       sequelize,
-      modelName: "User",
-      tableName: "users"
+      modelName   : "User",
+      tableName   : "users"
+      
     }
   );
 
