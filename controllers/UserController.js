@@ -122,7 +122,12 @@ const UserController = {
         return res
           .status(400)
           .json({ status: false, message: "Email hoặc mật khẩu không đúng!" });
-
+      if (user.tinh_trang === 0) {
+      return res.json({
+        status: false,
+        message: "Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email!",
+      });
+    }
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch)
         return res
@@ -138,7 +143,12 @@ const UserController = {
         expiresIn: "7d",
       });
 
-      res.cookie("token", token, { httpOnly: true });
+      res.cookie("token", token, { httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        // sameSite: "strict",
+        // maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+
+       });
       return res.json({
         status: true,
         message: "Đăng nhập thành công!",
@@ -146,6 +156,7 @@ const UserController = {
           id: user.id,
           full_name: user.full_name,
           email: user.email,
+          role: user.role,
           token,
         },
       });
