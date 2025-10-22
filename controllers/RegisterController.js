@@ -1,5 +1,4 @@
 // RegisterController.js
-
 const { User } = require("./../models");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
@@ -23,18 +22,26 @@ module.exports = {
         medical_history,
         password,
       } = req.body;
-
-      // Kiểm tra email trùng
+      if (!email || !password || !full_name) {
+        return res.status(400).json({
+          status: false,
+          message: "Vui lòng nhập đầy đủ họ tên, email và mật khẩu!",
+        });
+      }
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
         return res.json({ status: false, message: "Email đã được sử dụng!" });
       }
 
-      // Hash mật khẩu
+      const existingPhone = await User.findOne({ where: { phone } });
+      if (existingPhone) {
+        return res.json({
+          status: false,
+          message: "Số điện thoại đã được đăng ký!",
+        });
+      }
       const hashedPassword = await bcrypt.hash(password, 10);
       const activeToken = uuidv4();
-
-      // Tạo user mới
       const user = await User.create({
         full_name,
         birthday,
@@ -43,14 +50,12 @@ module.exports = {
         email,
         address,
         blood_group,
-        role,
+        role: role || "donor",
         medical_history,
         password: hashedPassword,
         tinh_trang: 0,
         hash_active: activeToken,
       });
-
-      // Gửi mail kích hoạt
       const activateLink = `${process.env.APP_URL}/activate/${activeToken}`;
       await transporter.sendMail({
         from: `"Smart Blood Donation" <${process.env.MAIL_USER}>`,
@@ -65,11 +70,15 @@ module.exports = {
           <p>Nếu bạn không đăng ký, vui lòng bỏ qua email này.</p>
         `,
       });
-
       return res.json({
         status: true,
         message: "Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt.",
-        data: { id: user.id, full_name: user.full_name, email: user.email, role: user.role },
+        data: {
+          id: user.id,
+          full_name: user.full_name,
+          email: user.email,
+          role: user.role,
+        },
       });
     } catch (err) {
       console.error("❌ Register error:", err);

@@ -1,3 +1,4 @@
+// routes/api.js
 const express = require("express");
 const router = express.Router();
 
@@ -26,12 +27,7 @@ router.post("/forgot-password", ForgotPasswordController.forgotPassword);
 router.post("/change-password", ResetPasswordController.resetPassword);
 
 // Đăng ký
-router.post(
-  "/register",
-  CreateTaiKhoanRequest,
-  validateRequest,
-  RegisterController.register
-);
+router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
 
 // Đăng nhập
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
@@ -39,7 +35,8 @@ router.post("/login", LoginRequest, validateRequest, LoginController.login);
 // Đăng xuất
 router.get("/logout", LogoutController.logout);
 
-// Lấy thông tin user (sau khi login)
-router.get("/profile", verifyToken, ProfileController.profile);
+// Profile
+router.get("/profile", verifyToken, ProfileController.getProfile);
+router.put("/profile", verifyToken, ProfileController.updateProfile);
 
 module.exports = router;
