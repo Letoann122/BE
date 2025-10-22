@@ -10,30 +10,36 @@ const {
   ResetPasswordController,
 } = require("../controllers");
 
+const ProfileController = require("../controllers/ProfileController");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
-//kich-hoat
+const verifyToken = require("../middlewares/verifyToken");
+
+// Kích hoạt tài khoản
 router.get("/activate/:token", ActivateController.activate);
-//quen-pass
+
+// Quên mật khẩu
 router.post("/forgot-password", ForgotPasswordController.forgotPassword);
-//doi-pass
+
+// Đổi mật khẩu
 router.post("/change-password", ResetPasswordController.resetPassword);
-//dang-ky
+
+// Đăng ký
 router.post(
   "/register",
   CreateTaiKhoanRequest,
   validateRequest,
   RegisterController.register
 );
-//dang-nhap
-router.post(
-  "/login",
-  LoginRequest,
-  validateRequest,
-  LoginController.login
-);
-//dang-xuat
+
+// Đăng nhập
+router.post("/login", LoginRequest, validateRequest, LoginController.login);
+
+// Đăng xuất
 router.get("/logout", LogoutController.logout);
+
+// Lấy thông tin user (sau khi login)
+router.get("/profile", verifyToken, ProfileController.profile);
 
 module.exports = router;
