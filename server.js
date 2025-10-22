@@ -16,7 +16,7 @@ app.use(express.json());
 
 // import routes
 const apiRoutes = require("./routes/api");
-app.use("/", apiRoutes);
+app.use("/api/auth", apiRoutes);
 
 app.get("/", (req, res) => {
   res.send("Smart Blood Donation API running...");
