@@ -1,31 +1,42 @@
+// routes/api.js
 const express = require("express");
 const router = express.Router();
-const UserController = require("../controllers/UserController");
+
+const {
+  RegisterController,
+  ActivateController,
+  LoginController,
+  LogoutController,
+  ForgotPasswordController,
+  ResetPasswordController,
+} = require("../controllers");
+
+const ProfileController = require("../controllers/ProfileController");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const validateRequest = require("../middlewares/validateRequest");
-const { check } = require("express-validator");
 const LoginRequest = require("../middlewares/LoginRequest");
+const verifyToken = require("../middlewares/verifyToken");
 
-//active_account
-router.get("/activate/:token", UserController.activate);
-//forgot_password
-router.post("/forgot-password", UserController.forgotPassword);
-router.post("/change-password", UserController.resetPassword);
-//dang-ky
-router.post(
-  "/register",
-  CreateTaiKhoanRequest,
-  validateRequest,
-  UserController.register
-);
-//dang-nhap
-router.post("/login", 
-LoginRequest,
-validateRequest,
-  UserController.login
-);
-//dang-xuat
-router.get("/logout", 
-  UserController.logout);
+// Kích hoạt tài khoản
+router.get("/activate/:token", ActivateController.activate);
+
+// Quên mật khẩu
+router.post("/forgot-password", ForgotPasswordController.forgotPassword);
+
+// Đổi mật khẩu
+router.post("/change-password", ResetPasswordController.resetPassword);
+
+// Đăng ký
+router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
+
+// Đăng nhập
+router.post("/login", LoginRequest, validateRequest, LoginController.login);
+
+// Đăng xuất
+router.get("/logout", LogoutController.logout);
+
+// Profile
+router.get("/profile", verifyToken, ProfileController.getProfile);
+router.put("/profile", verifyToken, ProfileController.updateProfile);
 
 module.exports = router;
