@@ -12,82 +12,81 @@ module.exports = (sequelize, DataTypes) => {
     {
       full_name: {
         type: DataTypes.STRING(255),
-        allowNull: false
+        allowNull: false,
       },
       birthday: {
         type: DataTypes.DATEONLY,
-        allowNull: false
+        allowNull: false,
       },
       gender: {
         type: DataTypes.ENUM("Nam", "Nữ", "Khác"),
-        allowNull: false
+        allowNull: false,
       },
       phone: {
         type: DataTypes.STRING(10),
         allowNull: false,
-        unique: true
+        unique: true,
       },
       email: {
         type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
         validate: {
-          isEmail: true
-        }
+          isEmail: true,
+        },
       },
       address: {
         type: DataTypes.STRING(255),
-        allowNull: false
+        allowNull: false,
       },
       blood_group: {
         type: DataTypes.ENUM("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"),
-        allowNull: false
+        allowNull: false,
       },
       role: {
         type: DataTypes.ENUM("donor", "admin", "doctor"),
         allowNull: false,
-        defaultValue: "donor"
+        defaultValue: "donor",
       },
       medical_history: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: true,
       },
       password: {
         type: DataTypes.STRING(255),
-        allowNull: false
+        allowNull: false,
       },
       tinh_trang: {
-        type:  DataTypes.TINYINT,
+        type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 0,
-        comments: "Trạng thái tài khoản"
+        comments: "Trạng thái tài khoản",
       },
       hash_active: {
         type: DataTypes.STRING(36),
         allowNull: true,
-           require: false,
+        require: false,
       },
-      resetPasswordExpires: {
-        // thời điểm hết hạn token reset password
+      // resetPasswordExpires: {
+      //   // thời điểm hết hạn token reset password
+      //   type: DataTypes.DATE,
+      //   allowNull: true,
+      //   require: false,
+      //   comments: "UUID để kích hoạt tài khoản"
+      // },
+      reset_token: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      reset_expires: {
         type: DataTypes.DATE,
         allowNull: true,
-        require: false,
-        comments: "UUID để kích hoạt tài khoản"
       },
-      reset_token : {
-        type      : DataTypes.STRING,
-        allowNull : true,
-      },
-      reset_expires : {
-        type      : DataTypes.DATE,
-        allowNull : true,
-      }
     },
     {
       sequelize,
-      modelName   : "User",
-      tableName   : "users"
-      
+      modelName: "User",
+      tableName: "users",
     }
   );
 

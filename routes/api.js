@@ -1,4 +1,3 @@
-// routes/api.js
 const express = require("express");
 const router = express.Router();
 
@@ -12,30 +11,35 @@ const {
 } = require("../controllers");
 
 const ProfileController = require("../controllers/ProfileController");
+const ChangePasswordController = require("../controllers/ChangePassController");
+
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const verifyToken = require("../middlewares/verifyToken");
 
-// Kích hoạt tài khoản
+// active-acc
 router.get("/activate/:token", ActivateController.activate);
 
-// Quên mật khẩu
+//quen-mk
 router.post("/forgot-password", ForgotPasswordController.forgotPassword);
 
-// Đổi mật khẩu
-router.post("/change-password", ResetPasswordController.resetPassword);
+//dat-lai-mk
+router.post("/reset-password", ResetPasswordController.resetPassword);
 
-// Đăng ký
+//doi-pass
+router.put("/change-password", verifyToken, ChangePasswordController.changePassword);
+
+//register_client
 router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
 
-// Đăng nhập
+// login
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
 
-// Đăng xuất
+//logout
 router.get("/logout", LogoutController.logout);
 
-// Profile
+// profile
 router.get("/profile", verifyToken, ProfileController.getProfile);
 router.put("/profile", verifyToken, ProfileController.updateProfile);
 
