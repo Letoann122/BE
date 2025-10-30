@@ -21,7 +21,6 @@ module.exports = {
         medical_history,
         password,
       } = req.body;
-
       if (!email || !password || !full_name) {
         return res.status(400).json({
           status: false,
@@ -32,6 +31,7 @@ module.exports = {
       if (existingUser) {
         return res.json({ status: false, message: "Email đã được sử dụng!" });
       }
+
       const existingPhone = await User.findOne({ where: { phone } });
       if (existingPhone) {
         return res.json({
@@ -64,23 +64,26 @@ module.exports = {
           subject: "Kích hoạt tài khoản của bạn",
           html: `
             <h2>Xin chào ${full_name},</h2>
-            <p>Cảm ơn bạn đã đăng ký tài khoản tại Smart Blood Donation.</p>
+            <p>Cảm ơn bạn đã đăng ký tài khoản tại <b>Smart Blood Donation</b>.</p>
             <p>Vui lòng nhấn vào link dưới đây để kích hoạt tài khoản:</p>
             <a href="${activateLink}" target="_blank">${activateLink}</a>
             <br/><br/>
             <p>Nếu bạn không đăng ký, vui lòng bỏ qua email này.</p>
           `,
         });
-      } else if (role === "hospital") {
+      } 
+      else if (role === "doctor") {
         userData.tinh_trang = 0;
-        userData.hash_active = null;
+        userData.hash_active = null;  
       }
       const user = await User.create(userData);
       let message = "";
       if (role === "donor") {
         message = "Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.";
+      } else if (role === "doctor") {
+        message = "Đăng ký thành công! Tài khoản bác sĩ của bạn đang được xét duyệt bởi quản trị viên.";
       } else {
-        message = "Đăng ký thành công! Tài khoản của bạn đang được xét duyệt bởi quản trị viên.";
+        message = "Đăng ký thành công!";
       }
       return res.json({
         status: true,

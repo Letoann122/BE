@@ -68,7 +68,7 @@ const CreateTaiKhoanRequest = [
 
   body("role")
     .notEmpty().withMessage("Bạn chưa chọn vai trò.")
-    .isIn(["donor", "hospital"])
+    .isIn(["donor", "doctor"])
     .withMessage("Vai trò không hợp lệ."),
 
   body("medical_history")
