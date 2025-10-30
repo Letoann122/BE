@@ -4,7 +4,6 @@ const { Model, uuidv4 } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
-      // Nếu sau này có quan hệ với bảng khác thì thêm ở đây
     }
   }
 
@@ -19,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       gender: {
-        type: DataTypes.ENUM("Nam", "Nữ", "Khác"),
+        type: DataTypes.ENUM("Nam", "Nữ"),
         allowNull: false,
       },
       phone: {
@@ -44,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       role: {
-        type: DataTypes.ENUM("donor", "admin", "doctor"),
+        type: DataTypes.ENUM("donor", "admin", "hospital","doctor"),
         allowNull: false,
         defaultValue: "donor",
       },
@@ -87,6 +86,9 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: "User",
       tableName: "users",
+      timestamps: true,
+      createdAt: "created_at",
+      updatedAt: "updated_at",
     }
   );
 

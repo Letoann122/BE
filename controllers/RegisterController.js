@@ -1,4 +1,3 @@
-// RegisterController.js
 const { User } = require("./../models");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
@@ -42,7 +41,7 @@ module.exports = {
       }
       const hashedPassword = await bcrypt.hash(password, 10);
       const activeToken = uuidv4();
-      const user = await User.create({
+      let userData = {
         full_name,
         birthday,
         gender,
@@ -55,29 +54,46 @@ module.exports = {
         password: hashedPassword,
         tinh_trang: 0,
         hash_active: activeToken,
-      });
-      const activateLink = `${process.env.APP_URL}/activate/${activeToken}`;
-      await transporter.sendMail({
-        from: `"Smart Blood Donation" <${process.env.MAIL_USER}>`,
-        to: email,
-        subject: "Kích hoạt tài khoản của bạn",
-        html: `
-          <h2>Xin chào ${full_name},</h2>
-          <p>Cảm ơn bạn đã đăng ký tài khoản tại Smart Blood Donation.</p>
-          <p>Vui lòng nhấn vào link dưới đây để kích hoạt tài khoản:</p>
-          <a href="${activateLink}" target="_blank">${activateLink}</a>
-          <br/><br/>
-          <p>Nếu bạn không đăng ký, vui lòng bỏ qua email này.</p>
-        `,
-      });
+      };
+
+      if (role === "donor") {
+        const activateLink = `${process.env.APP_URL}/activate/${activeToken}`;
+        await transporter.sendMail({
+          from: `"Smart Blood Donation" <${process.env.MAIL_USER}>`,
+          to: email,
+          subject: "Kích hoạt tài khoản của bạn",
+          html: `
+            <h2>Xin chào ${full_name},</h2>
+            <p>Cảm ơn bạn đã đăng ký tài khoản tại <b>Smart Blood Donation</b>.</p>
+            <p>Vui lòng nhấn vào link dưới đây để kích hoạt tài khoản:</p>
+            <a href="${activateLink}" target="_blank">${activateLink}</a>
+            <br/><br/>
+            <p>Nếu bạn không đăng ký, vui lòng bỏ qua email này.</p>
+          `,
+        });
+      } 
+      else if (role === "doctor") {
+        userData.tinh_trang = 0;
+        userData.hash_active = null;  
+      }
+      const user = await User.create(userData);
+      let message = "";
+      if (role === "donor") {
+        message = "Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.";
+      } else if (role === "doctor") {
+        message = "Đăng ký thành công! Tài khoản bác sĩ của bạn đang được xét duyệt bởi quản trị viên.";
+      } else {
+        message = "Đăng ký thành công!";
+      }
       return res.json({
         status: true,
-        message: "Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt.",
+        message,
         data: {
           id: user.id,
           full_name: user.full_name,
           email: user.email,
           role: user.role,
+          tinh_trang: user.tinh_trang,
         },
       });
     } catch (err) {

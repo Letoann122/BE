@@ -18,7 +18,7 @@ module.exports = {
         allowNull: false,
       },
       gender: {
-        type: Sequelize.ENUM("Nam", "Nữ", "Khác"),
+        type: Sequelize.ENUM("Nam", "Nữ"),
         allowNull: false,
       },
       phone: {
@@ -40,7 +40,7 @@ module.exports = {
         allowNull: false,
       },
       role: {
-        type: Sequelize.ENUM("donor", "admin", "doctor"),
+        type: Sequelize.ENUM("donor", "admin", "hospital", "doctor"),
         allowNull: false,
         defaultValue: "donor",
       },
@@ -66,13 +66,16 @@ module.exports = {
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
+        field: "created_at",
         defaultValue: Sequelize.fn("NOW"),
       },
       updatedAt: {
         allowNull: false,
         type: Sequelize.DATE,
+        field: "updated_at",
         defaultValue: Sequelize.fn("NOW"),
       },
+
     });
   },
 

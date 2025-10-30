@@ -20,14 +20,16 @@ const CreateTaiKhoanRequest = [
   body("password_confirmation")
     .notEmpty().withMessage("Bạn chưa nhập lại mật khẩu.")
     .custom((value, { req }) => {
-      if (value !== req.body.password) throw new Error("Mật khẩu nhập lại không khớp.");
+      if (value !== req.body.password)
+        throw new Error("Mật khẩu nhập lại không khớp.");
       return true;
     }),
 
   body("full_name")
     .notEmpty().withMessage("Bạn chưa nhập họ và tên.")
     .isLength({ max: 255 }).withMessage("Họ và tên không được quá 255 ký tự.")
-    .matches(/^[A-Za-zÀ-ỹ\s]+$/u).withMessage("Họ tên chỉ được chứa chữ cái và khoảng trắng."),
+    .matches(/^[A-Za-zÀ-ỹ\s]+$/u)
+    .withMessage("Chỉ được nhập chữ cái."),
 
   body("phone")
     .notEmpty().withMessage("Bạn chưa nhập số điện thoại.")
@@ -66,7 +68,8 @@ const CreateTaiKhoanRequest = [
 
   body("role")
     .notEmpty().withMessage("Bạn chưa chọn vai trò.")
-    .isIn(["donor", "doctor"]).withMessage("Vai trò không hợp lệ."),
+    .isIn(["donor", "doctor"])
+    .withMessage("Vai trò không hợp lệ."),
 
   body("medical_history")
     .optional({ checkFalsy: true })
