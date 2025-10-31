@@ -27,9 +27,7 @@ const CreateTaiKhoanRequest = [
 
   body("full_name")
     .notEmpty().withMessage("Bạn chưa nhập họ và tên.")
-    .isLength({ max: 255 }).withMessage("Họ và tên không được quá 255 ký tự.")
-    .matches(/^[A-Za-zÀ-ỹ\s]+$/u)
-    .withMessage("Chỉ được nhập chữ cái."),
+    .isLength({ max: 255 }).withMessage("Họ và tên không được quá 255 ký tự."),
 
   body("phone")
     .notEmpty().withMessage("Bạn chưa nhập số điện thoại.")
@@ -49,7 +47,7 @@ const CreateTaiKhoanRequest = [
       const now = new Date();
       if (d > now) throw new Error("Ngày sinh không được lớn hơn ngày hiện tại.");
       const age = now.getFullYear() - d.getFullYear();
-      if (age < 18) throw new Error("Người hiến máu phải từ 18 tuổi trở lên.");
+      if (age < 18) throw new Error("Phải từ 18 tuổi trở lên.");
       return true;
     }),
 
@@ -61,17 +59,18 @@ const CreateTaiKhoanRequest = [
     .notEmpty().withMessage("Bạn chưa nhập địa chỉ.")
     .isLength({ max: 255 }).withMessage("Địa chỉ không được quá 255 ký tự."),
 
+  body("role")
+    .notEmpty().withMessage("Bạn chưa chọn vai trò.")
+    .isIn(["donor", "doctor"]).withMessage("Vai trò không hợp lệ."),
+
   body("blood_group")
+    .if(body("role").equals("donor"))
     .notEmpty().withMessage("Vui lòng chọn nhóm máu.")
     .isIn(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
     .withMessage("Nhóm máu không hợp lệ."),
 
-  body("role")
-    .notEmpty().withMessage("Bạn chưa chọn vai trò.")
-    .isIn(["donor", "doctor"])
-    .withMessage("Vai trò không hợp lệ."),
-
   body("medical_history")
+    .if(body("role").equals("donor"))
     .optional({ checkFalsy: true })
     .isLength({ max: 1000 }).withMessage("Tiền sử bệnh lý không được vượt quá 1000 ký tự.")
     .matches(/^[^<>{}]*$/).withMessage("Tiền sử bệnh lý không được chứa ký tự đặc biệt."),

@@ -40,7 +40,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       blood_group: {
         type: DataTypes.ENUM("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"),
-        allowNull: false,
+        allowNull: true,
       },
       role: {
         type: DataTypes.ENUM("donor", "admin", "hospital","doctor"),
@@ -66,13 +66,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         require: false,
       },
-      // resetPasswordExpires: {
-      //   // thời điểm hết hạn token reset password
-      //   type: DataTypes.DATE,
-      //   allowNull: true,
-      //   require: false,
-      //   comments: "UUID để kích hoạt tài khoản"
-      // },
       reset_token: {
         type: DataTypes.STRING,
         allowNull: true,
