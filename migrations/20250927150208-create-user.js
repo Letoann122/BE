@@ -52,8 +52,6 @@ module.exports = {
         type: Sequelize.STRING(255),
         allowNull: false,
       },
-      
-      
       resetPasswordToken: {
         type: Sequelize.STRING(255),
         allowNull: true, // Cho phép NULL khi tạo tài khoản mới

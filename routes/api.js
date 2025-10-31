@@ -14,6 +14,7 @@ const {
 const ProfileController        = require("../controllers/ProfileController");
 const ChangePasswordController = require("../controllers/ChangePassController");
 const NewsController           = require("../controllers/NewsController");
+const AcpDoctorController = require("../controllers/admin/AcpDoctorController");
 
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const validateRequest = require("../middlewares/validateRequest");
@@ -36,5 +37,13 @@ router.put("/profile", verifyToken, ProfileController.updateProfile);
 // ✅ News routes
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
+
+//Acp doctor
+router.get("/doctors/pending", AcpDoctorController.getPending);
+router.put("/doctors/:id/approve", AcpDoctorController.approve);
+router.put("/doctors/:id/reject", AcpDoctorController.reject);
+router.post("/doctors/search", AcpDoctorController.searchDoctor);
+
+
 
 module.exports = router;

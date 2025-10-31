@@ -29,12 +29,14 @@ module.exports = {
       }
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
-        return res.json({ status: false, message: "Email đã được sử dụng!" });
+        return res.status(400).json({
+          status: false,
+          message: "Email đã được sử dụng!",
+        });
       }
-
       const existingPhone = await User.findOne({ where: { phone } });
       if (existingPhone) {
-        return res.json({
+        return res.status(400).json({
           status: false,
           message: "Số điện thoại đã được đăng ký!",
         });
@@ -48,15 +50,14 @@ module.exports = {
         phone,
         email,
         address,
-        blood_group,
-        role: role || "donor",
-        medical_history,
         password: hashedPassword,
-        tinh_trang: 0,
-        hash_active: activeToken,
+        role: role || "donor",
+        tinh_trang: 0, 
       };
-
       if (role === "donor") {
+        userData.blood_group = blood_group;
+        userData.medical_history = medical_history;
+        userData.hash_active = activeToken;
         const activateLink = `${process.env.APP_URL}/activate/${activeToken}`;
         await transporter.sendMail({
           from: `"Smart Blood Donation" <${process.env.MAIL_USER}>`,
@@ -71,10 +72,12 @@ module.exports = {
             <p>Nếu bạn không đăng ký, vui lòng bỏ qua email này.</p>
           `,
         });
-      } 
+      }
       else if (role === "doctor") {
-        userData.tinh_trang = 0;
-        userData.hash_active = null;  
+        userData.blood_group = null;
+        userData.medical_history = null;
+        userData.hash_active = null;
+        userData.tinh_trang = 0; 
       }
       const user = await User.create(userData);
       let message = "";
@@ -85,7 +88,7 @@ module.exports = {
       } else {
         message = "Đăng ký thành công!";
       }
-      return res.json({
+      return res.status(201).json({
         status: true,
         message,
         data: {
