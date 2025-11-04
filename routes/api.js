@@ -1,4 +1,3 @@
-// routes/api.js
 const express = require("express");
 const router = express.Router();
 
@@ -14,36 +13,58 @@ const {
 const ProfileController        = require("../controllers/ProfileController");
 const ChangePasswordController = require("../controllers/ChangePassController");
 const NewsController           = require("../controllers/NewsController");
-const AcpDoctorController = require("../controllers/admin/AcpDoctorController");
 
+const AdminController          = require("../controllers/admin/AdminController");
+const AcpDoctorController      = require("../controllers/admin/AcpDoctorController");
+const DoctorController         = require("../controllers/doctor/DoctorController");
+const DonorController          = require("../controllers/donor/DonorController");
+
+//middleware
+const verifyToken         = require("../middlewares/verifyToken");
+const validateRequest      = require("../middlewares/validateRequest");
+const LoginRequest         = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
-const validateRequest = require("../middlewares/validateRequest");
-const LoginRequest = require("../middlewares/LoginRequest");
-const verifyToken = require("../middlewares/verifyToken");
 
-// Auth routes
-router.get("/activate/:token", ActivateController.activate);
-router.post("/forgot-password", ForgotPasswordController.forgotPassword);
-router.post("/reset-password", ResetPasswordController.resetPassword);
-router.put("/change-password", verifyToken, ChangePasswordController.changePassword);
+// Auth
 router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
 router.get("/logout", LogoutController.logout);
 
-// Profile routes
-router.get("/profile", verifyToken, ProfileController.getProfile);
-router.put("/profile", verifyToken, ProfileController.updateProfile);
+router.get("/activate/:token", ActivateController.activate);
+router.post("/forgot-password", ForgotPasswordController.forgotPassword);
+router.post("/reset-password", ResetPasswordController.resetPassword);
 
-// ✅ News routes
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 
-//Acp doctor
-router.get("/doctors/pending", AcpDoctorController.getPending);
-router.put("/doctors/:id/approve", AcpDoctorController.approve);
-router.put("/doctors/:id/reject", AcpDoctorController.reject);
-router.post("/doctors/search", AcpDoctorController.searchDoctor);
+//donor
+const donorRouter = express.Router();
+donorRouter.get("/check-token", DonorController.checkToken);
 
+//profile donor
+donorRouter.get("/profile", ProfileController.getProfile);
+donorRouter.put("/profile", ProfileController.updateProfile);
+// Change password
+donorRouter.put("/change-password", ChangePasswordController.changePassword);
 
+router.use("/donor", verifyToken("donor"), donorRouter);
+
+//doctor
+const doctorRouter = express.Router();
+doctorRouter.get("/check-token", DoctorController.checkToken);
+
+router.use("/doctor", verifyToken("doctor"), doctorRouter);
+
+//admin
+const adminRouter = express.Router();
+adminRouter.get("/check-token", AdminController.checkToken);
+
+//acp-bacsi
+adminRouter.get("/doctors/pending", AcpDoctorController.getPending);
+adminRouter.put("/doctors/:id/approve", AcpDoctorController.approve);
+adminRouter.put("/doctors/:id/reject", AcpDoctorController.reject);
+adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
+
+router.use("/admin", verifyToken("admin"), adminRouter);
 
 module.exports = router;
