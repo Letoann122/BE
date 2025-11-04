@@ -4,7 +4,7 @@ module.exports = {
   // Lấy thông tin hồ sơ người dùng
   async getProfile(req, res) {
     try {
-      const user = await User.findByPk(req.user.id, {
+      const user = await User.findByPk(req.user.userId, {
         attributes: [
           "id",
           "full_name",
