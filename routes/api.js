@@ -57,6 +57,7 @@ router.delete(
   [verifyToken, verifyAdmin],
   AdminDonnorController.removeUser
 );
+router.get("/admin/campaigns", AdminDonnorController.getAllCampaigns);
 // router.get("/admin/donors", AdminDonnorController.getAllDonors);
 // router.put("/admin/donors/:id", AdminDonnorController.editDonor);
 // router.delete("/admin/donors/:id", AdminDonnorController.removeDonor);
