@@ -10,6 +10,7 @@ const {
   ResetPasswordController,
 } = require("../controllers");
 
+const BloodInventoryController = require("../controllers/doctor/BloodInventoryController");
 const ProfileController        = require("../controllers/ProfileController");
 const ChangePasswordController = require("../controllers/ChangePassController");
 const NewsController           = require("../controllers/NewsController");
@@ -52,6 +53,11 @@ router.use("/donor", verifyToken("donor"), donorRouter);
 //doctor
 const doctorRouter = express.Router();
 doctorRouter.get("/check-token", DoctorController.checkToken);
+doctorRouter.get("/blood-inventory", verifyToken("doctor"), BloodInventoryController.getAll);
+doctorRouter.post("/blood-inventory", verifyToken("doctor"), BloodInventoryController.create);
+doctorRouter.post("/blood-inventory/search", verifyToken("doctor"), BloodInventoryController.search);
+doctorRouter.put("/blood-inventory/:id", verifyToken("doctor"), BloodInventoryController.update);
+doctorRouter.delete("/blood-inventory/:id", verifyToken("doctor"), BloodInventoryController.delete);
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
