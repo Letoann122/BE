@@ -79,7 +79,7 @@ module.exports = {
       }
 
       // ✅ Update vào DB
-      const user = await User.findByPk(req.user.id);
+      const user = await User.findByPk(req.user.userId);
       if (!user) {
         return res.status(404).json({
           status: false,
