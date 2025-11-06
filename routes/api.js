@@ -55,7 +55,7 @@ const doctorRouter = express.Router();
 doctorRouter.get("/check-token", DoctorController.checkToken);
 doctorRouter.get("/blood-inventory", verifyToken("doctor"), BloodInventoryController.getAll);
 doctorRouter.post("/blood-inventory", verifyToken("doctor"), BloodInventoryController.create);
-doctorRouter.post("/blood-inventory/search", verifyToken("doctor"), BloodInventoryController.search);
+doctorRouter.post("/blood-inventory/filter", verifyToken("doctor"), BloodInventoryController.filter);
 doctorRouter.put("/blood-inventory/:id", verifyToken("doctor"), BloodInventoryController.update);
 doctorRouter.delete("/blood-inventory/:id", verifyToken("doctor"), BloodInventoryController.delete);
 
