@@ -1,3 +1,4 @@
+// routes/api.js
 const express = require("express");
 const router = express.Router();
 
@@ -11,22 +12,27 @@ const {
 } = require("../controllers");
 
 const BloodInventoryController = require("../controllers/doctor/BloodInventoryController");
-const ProfileController        = require("../controllers/ProfileController");
+const ProfileController = require("../controllers/ProfileController");
 const ChangePasswordController = require("../controllers/ChangePassController");
-const NewsController           = require("../controllers/NewsController");
+const NewsController = require("../controllers/NewsController");
 
-const AdminController          = require("../controllers/admin/AdminController");
-const AcpDoctorController      = require("../controllers/admin/AcpDoctorController");
-const DoctorController         = require("../controllers/doctor/DoctorController");
-const DonorController          = require("../controllers/donor/DonorController");
+const AdminController = require("../controllers/admin/AdminController");
+const AcpDoctorController = require("../controllers/admin/AcpDoctorController");
+const DoctorController = require("../controllers/doctor/DoctorController");
+const DonorController = require("../controllers/donor/DonorController");
+const AdminDonorController = require("../controllers/admin/AdminDonorController");
+const campaignsController = require("../controllers/admin/campaignsController");
+const dashboardController = require("../controllers/admin/DashboardController");
 
-//middleware
-const verifyToken         = require("../middlewares/verifyToken");
-const validateRequest      = require("../middlewares/validateRequest");
-const LoginRequest         = require("../middlewares/LoginRequest");
+// middleware
+const verifyToken = require("../middlewares/verifyToken");
+const validateRequest = require("../middlewares/validateRequest");
+const LoginRequest = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 
-// Auth
+// ======================================================
+// =============== AUTHENTICATION ROUTES ================
+// ======================================================
 router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
 router.get("/logout", LogoutController.logout);
@@ -35,23 +41,29 @@ router.get("/activate/:token", ActivateController.activate);
 router.post("/forgot-password", ForgotPasswordController.forgotPassword);
 router.post("/reset-password", ResetPasswordController.resetPassword);
 
+// ======================================================
+// ===================== NEWS ROUTES ====================
+// ======================================================
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 
-//donor
+// ======================================================
+// ===================== DONOR ROUTES ===================
+// ======================================================
 const donorRouter = express.Router();
-donorRouter.get("/check-token", DonorController.checkToken);
 
-//profile donor
+donorRouter.get("/check-token", DonorController.checkToken);
 donorRouter.get("/profile", ProfileController.getProfile);
 donorRouter.put("/profile", ProfileController.updateProfile);
-// Change password
 donorRouter.put("/change-password", ChangePasswordController.changePassword);
 
 router.use("/donor", verifyToken("donor"), donorRouter);
 
-//doctor
+// ======================================================
+// ===================== DOCTOR ROUTES ==================
+// ======================================================
 const doctorRouter = express.Router();
+
 doctorRouter.get("/check-token", DoctorController.checkToken);
 doctorRouter.get("/blood-inventory", verifyToken("doctor"), BloodInventoryController.getAll);
 doctorRouter.post("/blood-inventory", verifyToken("doctor"), BloodInventoryController.create);
@@ -61,16 +73,33 @@ doctorRouter.delete("/blood-inventory/:id", verifyToken("doctor"), BloodInventor
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
-//admin
+// ======================================================
+// ===================== ADMIN ROUTES ===================
+// ======================================================
 const adminRouter = express.Router();
-adminRouter.get("/check-token", AdminController.checkToken);
 
-//acp-bacsi
-adminRouter.get("/doctors/pending", AcpDoctorController.getPending);
-adminRouter.put("/doctors/:id/approve", AcpDoctorController.approve);
-adminRouter.put("/doctors/:id/reject", AcpDoctorController.reject);
-adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
+// Check-token admin
+adminRouter.get("/check-token", verifyToken("admin"), AdminController.checkToken);
 
+// Quản lý user
+adminRouter.get("/users", verifyToken("admin"), AdminDonorController.getAllUsers);
+adminRouter.put("/users/:id", verifyToken("admin"), AdminDonorController.editUser);
+adminRouter.delete("/users/:id", verifyToken("admin"), AdminDonorController.removeUser);
+
+// Chiến dịch hiến máu
+adminRouter.post("/Campaigns", verifyToken("admin"), campaignsController.createCampaign);
+router.get("/Campaigns", campaignsController.getAllCampaigns); // public cho user xem
+
+// Dashboard
+adminRouter.get("/dashboard", verifyToken("admin"), dashboardController.getStats);
+
+// ACP bác sĩ
+adminRouter.get("/doctors/pending", verifyToken("admin"), AcpDoctorController.getPending);
+adminRouter.put("/doctors/:id/approve", verifyToken("admin"), AcpDoctorController.approve);
+adminRouter.put("/doctors/:id/reject", verifyToken("admin"), AcpDoctorController.reject);
+adminRouter.post("/doctors/search", verifyToken("admin"), AcpDoctorController.searchDoctor);
+
+// Mount admin router
 router.use("/admin", verifyToken("admin"), adminRouter);
 
 module.exports = router;

@@ -1,22 +1,24 @@
-require('dotenv').config();
-const express = require('express');
+require("dotenv").config();
+const express = require("express");
 const app = express();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
-app.use(cors({
-  origin: "http://localhost:5173",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
 app.use(cookieParser());
-app.use(express.json()); 
+app.use(express.json());
 
 const apiRoutes = require("./routes/api");
 
 app.use("/api", apiRoutes);
-app.use("/", apiRoutes); 
+app.use("/", apiRoutes);
 
 app.get("/", (req, res) => {
   res.send("Smart Blood Donation API running...");
