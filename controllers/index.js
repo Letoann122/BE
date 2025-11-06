@@ -7,5 +7,5 @@ module.exports = {
   LogoutController: require("./LogoutController.js"),
   ForgotPasswordController: require("./ForgotPasswordController.js"),
   ResetPasswordController: require("./ResetPasswordController.js"),
-  AdminDonnorController: require("./Admin/AdminDonorController.js"),
+  AdminDonnorController: require("./admin/AdminDonorController.js"),
 };

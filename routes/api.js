@@ -20,9 +20,9 @@ const AdminController = require("../controllers/admin/AdminController");
 const AcpDoctorController = require("../controllers/admin/AcpDoctorController");
 const DoctorController = require("../controllers/doctor/DoctorController");
 const DonorController = require("../controllers/donor/DonorController");
-const AdminDonorController = require("../controllers/admin/AdminDonorController");
+const AdminController = require("../controllers/admin/AdminController");
 const campaignsController = require("../controllers/admin/campaignsController");
-const dashboardController = require("../controllers/admin/DashboardController");
+const DashboardController = require("../controllers/admin/DashboardController");
 
 // middleware
 const verifyToken = require("../middlewares/verifyToken");
@@ -33,7 +33,12 @@ const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest"
 // ======================================================
 // =============== AUTHENTICATION ROUTES ================
 // ======================================================
-router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
+router.post(
+  "/register",
+  CreateTaiKhoanRequest,
+  validateRequest,
+  RegisterController.register
+);
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
 router.get("/logout", LogoutController.logout);
 
@@ -65,11 +70,31 @@ router.use("/donor", verifyToken("donor"), donorRouter);
 const doctorRouter = express.Router();
 
 doctorRouter.get("/check-token", DoctorController.checkToken);
-doctorRouter.get("/blood-inventory", verifyToken("doctor"), BloodInventoryController.getAll);
-doctorRouter.post("/blood-inventory", verifyToken("doctor"), BloodInventoryController.create);
-doctorRouter.post("/blood-inventory/filter", verifyToken("doctor"), BloodInventoryController.filter);
-doctorRouter.put("/blood-inventory/:id", verifyToken("doctor"), BloodInventoryController.update);
-doctorRouter.delete("/blood-inventory/:id", verifyToken("doctor"), BloodInventoryController.delete);
+doctorRouter.get(
+  "/blood-inventory",
+  verifyToken("doctor"),
+  BloodInventoryController.getAll
+);
+doctorRouter.post(
+  "/blood-inventory",
+  verifyToken("doctor"),
+  BloodInventoryController.create
+);
+doctorRouter.post(
+  "/blood-inventory/filter",
+  verifyToken("doctor"),
+  BloodInventoryController.filter
+);
+doctorRouter.put(
+  "/blood-inventory/:id",
+  verifyToken("doctor"),
+  BloodInventoryController.update
+);
+doctorRouter.delete(
+  "/blood-inventory/:id",
+  verifyToken("doctor"),
+  BloodInventoryController.delete
+);
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
@@ -79,25 +104,65 @@ router.use("/doctor", verifyToken("doctor"), doctorRouter);
 const adminRouter = express.Router();
 
 // Check-token admin
-adminRouter.get("/check-token", verifyToken("admin"), AdminController.checkToken);
+adminRouter.get(
+  "/check-token",
+  verifyToken("admin"),
+  AdminController.checkToken
+);
 
 // Quản lý user
-adminRouter.get("/users", verifyToken("admin"), AdminDonorController.getAllUsers);
-adminRouter.put("/users/:id", verifyToken("admin"), AdminDonorController.editUser);
-adminRouter.delete("/users/:id", verifyToken("admin"), AdminDonorController.removeUser);
+adminRouter.get(
+  "/users",
+  verifyToken("admin"),
+  AdminDonorController.getAllUsers
+);
+adminRouter.put(
+  "/users/:id",
+  verifyToken("admin"),
+  AdminDonorController.editUser
+);
+adminRouter.delete(
+  "/users/:id",
+  verifyToken("admin"),
+  AdminDonorController.removeUser
+);
 
 // Chiến dịch hiến máu
-adminRouter.post("/Campaigns", verifyToken("admin"), campaignsController.createCampaign);
+adminRouter.post(
+  "/Campaigns",
+  verifyToken("admin"),
+  campaignsController.createCampaign
+);
 router.get("/Campaigns", campaignsController.getAllCampaigns); // public cho user xem
 
 // Dashboard
-adminRouter.get("/dashboard", verifyToken("admin"), dashboardController.getStats);
+adminRouter.get(
+  "/dashboard",
+  verifyToken("admin"),
+  dashboardController.getStats
+);
 
 // ACP bác sĩ
-adminRouter.get("/doctors/pending", verifyToken("admin"), AcpDoctorController.getPending);
-adminRouter.put("/doctors/:id/approve", verifyToken("admin"), AcpDoctorController.approve);
-adminRouter.put("/doctors/:id/reject", verifyToken("admin"), AcpDoctorController.reject);
-adminRouter.post("/doctors/search", verifyToken("admin"), AcpDoctorController.searchDoctor);
+adminRouter.get(
+  "/doctors/pending",
+  verifyToken("admin"),
+  AcpDoctorController.getPending
+);
+adminRouter.put(
+  "/doctors/:id/approve",
+  verifyToken("admin"),
+  AcpDoctorController.approve
+);
+adminRouter.put(
+  "/doctors/:id/reject",
+  verifyToken("admin"),
+  AcpDoctorController.reject
+);
+adminRouter.post(
+  "/doctors/search",
+  verifyToken("admin"),
+  AcpDoctorController.searchDoctor
+);
 
 // Mount admin router
 router.use("/admin", verifyToken("admin"), adminRouter);
