@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 
+// ==================== CONTROLLERS ====================
 const {
   RegisterController,
   ActivateController,
@@ -20,11 +21,11 @@ const AdminController = require("../controllers/admin/AdminController");
 const AcpDoctorController = require("../controllers/admin/AcpDoctorController");
 const DoctorController = require("../controllers/doctor/DoctorController");
 const DonorController = require("../controllers/donor/DonorController");
-const AdminController = require("../controllers/admin/AdminController");
-const campaignsController = require("../controllers/admin/campaignsController");
+const AdminDonorController = require("../controllers/admin/AdminDonorController");
+const CampaignsController = require("../controllers/admin/CampaignsController");
 const DashboardController = require("../controllers/admin/DashboardController");
 
-// middleware
+// ==================== MIDDLEWARES ====================
 const verifyToken = require("../middlewares/verifyToken");
 const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
@@ -131,15 +132,15 @@ adminRouter.delete(
 adminRouter.post(
   "/Campaigns",
   verifyToken("admin"),
-  campaignsController.createCampaign
+  CampaignsController.createCampaign
 );
-router.get("/Campaigns", campaignsController.getAllCampaigns); // public cho user xem
+router.get("/Campaigns", CampaignsController.getAllCampaigns); // public cho user xem
 
 // Dashboard
 adminRouter.get(
   "/dashboard",
   verifyToken("admin"),
-  dashboardController.getStats
+  DashboardController.getDashboardStats
 );
 
 // ACP bác sĩ
@@ -167,4 +168,7 @@ adminRouter.post(
 // Mount admin router
 router.use("/admin", verifyToken("admin"), adminRouter);
 
+// ======================================================
+// ===================== EXPORT ROUTER ==================
+// ======================================================
 module.exports = router;
