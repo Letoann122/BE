@@ -17,7 +17,8 @@ module.exports = {
           message: "Mật khẩu xác nhận không khớp!",
         });
       }
-      const user = await User.findByPk(req.user.id);
+      const userId = req.user.userId;
+      const user = await User.findByPk(userId);
       if (!user) {
         return res.status(404).json({
           status: false,
