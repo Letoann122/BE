@@ -6,15 +6,19 @@ module.exports = {
   async getAll(req, res) {
     try {
       const list = await BloodInventory.findAll({
-  include: [
-    { model: BloodType, as: "blood_type", attributes: ["abo", "rh"] },
-    { model: User, as: "user", attributes: ["full_name"] },
-  ],
-  order: [["id", "DESC"]],
-});
+        include: [
+          { model: BloodType, as: "blood_type", attributes: ["abo", "rh"] },
+          { model: User, as: "user", attributes: ["full_name"] },
+        ],
+        order: [["id", "DESC"]],
+      });
       res.json({ status: true, data: list });
     } catch (error) {
-      res.status(500).json({ status: false, message: "Lỗi lấy danh sách", error: error.message });
+      res.status(500).json({
+        status: false,
+        message: "Lỗi lấy danh sách",
+        error: error.message,
+      });
     }
   },
 
@@ -22,9 +26,9 @@ module.exports = {
   async create(req, res) {
     try {
       const { blood_type_id, units, donation_date, expiry_date } = req.body;
-      const user_id = req.user.userId; // lấy từ token
+      const user_id = req.user.userId;
 
-      // ✅ Tự động tính trạng thái
+      // ✅ Tính trạng thái tự động
       const today = new Date();
       const exp = new Date(expiry_date);
       const diff = (exp - today) / (1000 * 3600 * 24);
@@ -44,7 +48,11 @@ module.exports = {
 
       res.json({ status: true, message: "Thêm lô máu thành công", data: newBatch });
     } catch (error) {
-      res.status(500).json({ status: false, message: "Lỗi thêm lô máu", error: error.message });
+      res.status(500).json({
+        status: false,
+        message: "Lỗi thêm lô máu",
+        error: error.message,
+      });
     }
   },
 
@@ -55,7 +63,8 @@ module.exports = {
       const { blood_type_id, units, donation_date, expiry_date } = req.body;
 
       const batch = await BloodInventory.findByPk(id);
-      if (!batch) return res.status(404).json({ status: false, message: "Không tìm thấy lô máu" });
+      if (!batch)
+        return res.status(404).json({ status: false, message: "Không tìm thấy lô máu" });
 
       const today = new Date();
       const exp = new Date(expiry_date);
@@ -69,7 +78,11 @@ module.exports = {
 
       res.json({ status: true, message: "Cập nhật thành công", data: batch });
     } catch (error) {
-      res.status(500).json({ status: false, message: "Lỗi cập nhật", error: error.message });
+      res.status(500).json({
+        status: false,
+        message: "Lỗi cập nhật",
+        error: error.message,
+      });
     }
   },
 
@@ -78,52 +91,63 @@ module.exports = {
     try {
       const { id } = req.params;
       const batch = await BloodInventory.findByPk(id);
-      if (!batch) return res.status(404).json({ status: false, message: "Không tìm thấy lô máu" });
+      if (!batch)
+        return res.status(404).json({ status: false, message: "Không tìm thấy lô máu" });
       await batch.destroy();
       res.json({ status: true, message: "Xóa thành công" });
     } catch (error) {
-      res.status(500).json({ status: false, message: "Lỗi xóa", error: error.message });
+      res.status(500).json({
+        status: false,
+        message: "Lỗi xóa",
+        error: error.message,
+      });
     }
   },
-    // 🔍 Tìm kiếm lô máu theo nhóm hoặc trạng thái
-  async search(req, res) {
-  try {
-    const { noi_dung_tim } = req.body;
-    if (!noi_dung_tim?.trim()) 
-      return res.json({ status: false, message: "Từ khóa trống!" });
 
-    const keyword = noi_dung_tim.trim();
-    const where = { [Op.or]: [{ status: { [Op.like]: `%${keyword}%` } }] };
-    if (!isNaN(keyword)) where[Op.or].push({ units: Number(keyword) });
+  // 🧭 Lọc theo nhóm máu và trạng thái
+  async filter(req, res) {
+    try {
+      const { bloodType, status } = req.body; // ví dụ: { bloodType: "A+", status: "expiring" }
 
-    const result = await BloodInventory.findAll({
-      include: [
+      const whereClause = {};
+      if (status && status !== "all") {
+        whereClause.status = status;
+      }
+
+      const includeClause = [
         {
           model: BloodType,
           as: "blood_type",
           attributes: ["abo", "rh"],
-          where: {
-            [Op.or]: [
-              { abo: { [Op.like]: `%${keyword.toUpperCase()}%` } },
-              { rh: { [Op.like]: `%${keyword.toUpperCase()}%` } },
-            ],
-          },
-          required: false,
+          required: true,
         },
-      ],
-      where,
-      order: [["id", "DESC"]],
-    });
+        { model: User, as: "user", attributes: ["full_name"] },
+      ];
 
-    if (!result.length)
-      return res.json({ status: false, message: "Không tìm thấy kết quả!" });
+      // Nếu lọc theo nhóm máu
+      if (bloodType && bloodType !== "all") {
+        includeClause[0].where = {
+          [Op.and]: [
+            { abo: bloodType.replace(/[+-]/g, "") },
+            { rh: bloodType.includes("+") ? "+" : "-" },
+          ],
+        };
+      }
 
-    res.json({ status: true, data: result });
-  } catch (err) {
-    console.error("❌ Lỗi tìm kiếm:", err.message);
-    res.status(500).json({ status: false, message: "Lỗi tìm kiếm", error: err.message });
-  }
-}
+      const result = await BloodInventory.findAll({
+        include: includeClause,
+        where: whereClause,
+        order: [["id", "DESC"]],
+      });
 
-
+      res.json({ status: true, data: result });
+    } catch (error) {
+      console.error("❌ Lỗi filter:", error);
+      res.status(500).json({
+        status: false,
+        message: "Lỗi lọc dữ liệu",
+        error: error.message,
+      });
+    }
+  },
 };
