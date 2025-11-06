@@ -22,6 +22,8 @@ const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const verifyToken = require("../middlewares/verifyToken");
 const verifyAdmin = require("../middlewares/verifyAdmin");
+const campaignsController = require("../controllers/Admin/campaignsController");
+const dashboardController = require("../controllers/Admin/DashboardController");
 
 // Auth routes
 router.get("/activate/:token", ActivateController.activate);
@@ -57,7 +59,12 @@ router.delete(
   [verifyToken, verifyAdmin],
   AdminDonnorController.removeUser
 );
-router.get("/admin/campaigns", AdminDonnorController.getAllCampaigns);
+router.post(
+  "/admin/Campaigns",
+  [verifyToken, verifyAdmin],
+  campaignsController.createCampaign
+);
+router.get("/Campaigns", campaignsController.getAllCampaigns);
 // router.get("/admin/donors", AdminDonnorController.getAllDonors);
 // router.put("/admin/donors/:id", AdminDonnorController.editDonor);
 // router.delete("/admin/donors/:id", AdminDonnorController.removeDonor);
