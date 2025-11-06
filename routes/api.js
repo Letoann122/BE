@@ -137,11 +137,7 @@ adminRouter.post(
 router.get("/Campaigns", CampaignsController.getAllCampaigns); // public cho user xem
 
 // Dashboard
-adminRouter.get(
-  "/dashboard",
-  verifyToken("admin"),
-  DashboardController.getDashboardStats
-);
+adminRouter.get("/dashboard", verifyToken("admin"),DashboardController.getDashboardStats);
 
 // ACP bác sĩ
 adminRouter.get(
