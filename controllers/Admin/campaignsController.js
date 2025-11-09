@@ -6,7 +6,7 @@ module.exports = {
   async createCampaign(req, res) {
     try {
       const { title, content, start_date, end_date, is_emergency } = req.body;
-      const createdById = req.userData.id;
+      const createdById = req.user.userId;
 
       const newCampaign = await Campaign.create({
         title,
