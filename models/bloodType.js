@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       tableName: "blood_types",
       timestamps: false,
+      
     }
   );
   BloodType.associate = (models) => {
