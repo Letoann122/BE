@@ -4,12 +4,11 @@ module.exports = (sequelize, DataTypes) => {
     {
       id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
       abo: DataTypes.STRING(2),
-      rh: DataTypes.STRING(1),
+      rh: DataTypes.STRING(2),
     },
     {
       tableName: "blood_types",
       timestamps: false,
-      
     }
   );
   BloodType.associate = (models) => {
