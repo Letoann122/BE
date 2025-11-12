@@ -15,7 +15,7 @@ module.exports = {
       user.hash_active = null;
       await user.save();
 
-      return res.redirect(`${process.env.FRONTEND_URL}/dang-nhap`);
+      return res.redirect(`${process.env.FRONTEND_URL}/login`);
     } catch (error) {
       return res.status(500).json({ status: false, message: "Kích hoạt thất bại", error: error.message });
     }
