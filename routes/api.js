@@ -1,8 +1,6 @@
-// routes/api.js
 const express = require("express");
 const router = express.Router();
 
-// ==================== CONTROLLERS ====================
 const {
   RegisterController,
   ActivateController,
@@ -13,6 +11,7 @@ const {
 } = require("../controllers");
 
 const BloodInventoryController = require("../controllers/doctor/BloodInventoryController");
+const DoctorProfileController = require("../controllers/doctor/DoctorProfileController");
 const ProfileController = require("../controllers/ProfileController");
 const ChangePasswordController = require("../controllers/ChangePassController");
 const NewsController = require("../controllers/NewsController");
@@ -24,16 +23,18 @@ const DonorController = require("../controllers/donor/DonorController");
 const AdminDonorController = require("../controllers/admin/AdminDonorController");
 const CampaignsController = require("../controllers/admin/CampaignsController");
 const DashboardController = require("../controllers/admin/DashboardController");
+const ChangePassDoctorController = require("../controllers/doctor/ChangePassController");
 
-// ==================== MIDDLEWARES ====================
+const InventoryController = require("../controllers/admin/InventoryController");
+const AppointmentController = require("../controllers/admin/AppointmentController");
+const FeedbackController = require("../controllers/admin/FeedbackController");
+
 const verifyToken = require("../middlewares/verifyToken");
 const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 
-// ======================================================
-// =============== AUTHENTICATION ROUTES ================
-// ======================================================
+// auth routes
 router.post(
   "/register",
   CreateTaiKhoanRequest,
@@ -47,15 +48,11 @@ router.get("/activate/:token", ActivateController.activate);
 router.post("/forgot-password", ForgotPasswordController.forgotPassword);
 router.post("/reset-password", ResetPasswordController.resetPassword);
 
-// ======================================================
-// ===================== NEWS ROUTES ====================
-// ======================================================
+// news routes
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 
-// ======================================================
-// ===================== DONOR ROUTES ===================
-// ======================================================
+// donor routes
 const donorRouter = express.Router();
 
 donorRouter.get("/check-token", DonorController.checkToken);
@@ -63,108 +60,68 @@ donorRouter.get("/profile", ProfileController.getProfile);
 donorRouter.put("/profile", ProfileController.updateProfile);
 donorRouter.put("/change-password", ChangePasswordController.changePassword);
 
+// Bọc middleware verifyToken cho toàn bộ donor
 router.use("/donor", verifyToken("donor"), donorRouter);
 
-// ======================================================
-// ===================== DOCTOR ROUTES ==================
-// ======================================================
+// doctor routes
 const doctorRouter = express.Router();
 
 doctorRouter.get("/check-token", DoctorController.checkToken);
-doctorRouter.get(
-  "/blood-inventory",
-  verifyToken("doctor"),
-  BloodInventoryController.getAll
-);
-doctorRouter.post(
-  "/blood-inventory",
-  verifyToken("doctor"),
-  BloodInventoryController.create
-);
-doctorRouter.post(
-  "/blood-inventory/filter",
-  verifyToken("doctor"),
-  BloodInventoryController.filter
-);
-doctorRouter.put(
-  "/blood-inventory/:id",
-  verifyToken("doctor"),
-  BloodInventoryController.update
-);
-doctorRouter.delete(
-  "/blood-inventory/:id",
-  verifyToken("doctor"),
-  BloodInventoryController.delete
-);
+doctorRouter.get("/profile", DoctorProfileController.getProfile);
+doctorRouter.put("/profile", DoctorProfileController.updateProfile);
+doctorRouter.put("/change-password", ChangePassDoctorController.changePassword);
 
+doctorRouter.get("/blood-inventory", BloodInventoryController.getAll);
+doctorRouter.post("/blood-inventory", BloodInventoryController.create);
+doctorRouter.post("/blood-inventory/filter", BloodInventoryController.filter);
+doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
+doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
+
+// Bọc middleware verifyToken cho toàn bộ doctor
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
-// ======================================================
-// ===================== ADMIN ROUTES ===================
-// ======================================================
 const adminRouter = express.Router();
 
-// Check-token admin
-adminRouter.get(
-  "/check-token",
-  verifyToken("admin"),
-  AdminController.checkToken
-);
+adminRouter.get("/check-token", AdminController.checkToken);
 
 // Quản lý user
-adminRouter.get(
-  "/users",
-  verifyToken("admin"),
-  AdminDonorController.getAllUsers
-);
-adminRouter.put(
-  "/users/:id",
-  verifyToken("admin"),
-  AdminDonorController.editUser
-);
-adminRouter.delete(
-  "/users/:id",
-  verifyToken("admin"),
-  AdminDonorController.removeUser
-);
+adminRouter.get("/users", AdminDonorController.getAllUsers);
+adminRouter.put("/users/:id", AdminDonorController.editUser);
+adminRouter.delete("/users/:id", AdminDonorController.removeUser);
 
 // Chiến dịch hiến máu
-adminRouter.post(
-  "/Campaigns",
-  verifyToken("admin"),
-  CampaignsController.createCampaign
-);
-router.get("/Campaigns", CampaignsController.getAllCampaigns); // public cho user xem
+adminRouter.post("/Campaigns", CampaignsController.createCampaign);
+router.get("/Campaigns", CampaignsController.getAllCampaigns);
 
 // Dashboard
-adminRouter.get("/dashboard", verifyToken("admin"),DashboardController.getDashboardStats);
+adminRouter.get("/dashboard", DashboardController.getDashboardStats);
 
 // ACP bác sĩ
-adminRouter.get(
-  "/doctors/pending",
-  verifyToken("admin"),
-  AcpDoctorController.getPending
+adminRouter.get("/doctors/pending", AcpDoctorController.getPending);
+adminRouter.put("/doctors/:id/approve", AcpDoctorController.approve);
+adminRouter.put("/doctors/:id/reject", AcpDoctorController.reject);
+adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
+
+// Quản lý kho máu
+adminRouter.get("/inventory", InventoryController.getAllInventory);
+
+// Quản lý lịch hẹn
+adminRouter.get("/appointments", AppointmentController.getAllAppointments);
+adminRouter.put(
+  "/appointments/:id/approve",
+  AppointmentController.approveAppointment
 );
 adminRouter.put(
-  "/doctors/:id/approve",
-  verifyToken("admin"),
-  AcpDoctorController.approve
-);
-adminRouter.put(
-  "/doctors/:id/reject",
-  verifyToken("admin"),
-  AcpDoctorController.reject
-);
-adminRouter.post(
-  "/doctors/search",
-  verifyToken("admin"),
-  AcpDoctorController.searchDoctor
+  "/appointments/:id/reject",
+  AppointmentController.rejectAppointment
 );
 
-// Mount admin router
+// Quản lý Feedback
+adminRouter.get("/feedback", FeedbackController.getAllFeedback);
+adminRouter.put("/feedback/:id/read", FeedbackController.markAsRead);
+adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
+
+// Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
 
-// ======================================================
-// ===================== EXPORT ROUTER ==================
-// ======================================================
 module.exports = router;
