@@ -4,9 +4,8 @@ const { Op } = require("sequelize");
 module.exports = {
   async getAllUsers(req, res) {
     try {
-      // 1. Lấy các tham số query từ FE
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 5; // Khớp với FE
+      const limit = parseInt(req.query.limit) || 5;
       const offset = (page - 1) * limit;
 
       const { search, role } = req.query;
@@ -15,7 +14,7 @@ module.exports = {
         role: { [Op.in]: ["donor", "doctor"] },
       };
 
-      if (role && (role === "donor" || role === "doctor")) {
+      if (role && ["donor", "doctor"].includes(role)) {
         whereCondition.role = role;
       }
 
@@ -28,31 +27,34 @@ module.exports = {
 
       const { count, rows } = await User.findAndCountAll({
         where: whereCondition,
-        limit: limit,
-        offset: offset,
-
+        limit,
+        offset,
+        order: [["created_at", "DESC"]],
         attributes: {
           exclude: ["password", "hash_active", "reset_token", "reset_expires"],
         },
-        order: [["created_at", "DESC"]],
       });
 
       res.status(200).json({
+        status: true,
+        message: "Tải danh sách người dùng thành công!",
         totalItems: count,
         totalPages: Math.ceil(count / limit),
         currentPage: page,
         data: rows,
       });
     } catch (error) {
-      console.error("Error in getAllUsers:", error);
-      res.status(500).json({ status: false, message: "Internal server error" });
+      console.error("🔥 Lỗi getAllUsers:", error);
+      res.status(500).json({
+        status: false,
+        message: "Lỗi server khi tải danh sách người dùng!",
+      });
     }
   },
 
   async editUser(req, res) {
     try {
       const { id } = req.params;
-
       const {
         full_name,
         birthday,
@@ -65,8 +67,7 @@ module.exports = {
         tinh_trang,
       } = req.body;
 
-      // Dữ liệu an toàn (không cho phép đổi vai trò)
-      const safe_data = {
+      const safeData = {
         full_name,
         birthday,
         gender,
@@ -78,10 +79,10 @@ module.exports = {
         tinh_trang,
       };
 
-      const [affectedRows] = await User.update(safe_data, {
+      const [affectedRows] = await User.update(safeData, {
         where: {
-          id: id,
-          role: { [Op.ne]: "admin" }, // Đảm bảo Admin không thể tự sửa Admin khác
+          id,
+          role: { [Op.ne]: "admin" },
         },
       });
 
@@ -92,12 +93,16 @@ module.exports = {
         });
       }
 
-      res
-        .status(200)
-        .json({ status: true, message: "Cập nhật người dùng thành công." });
+      res.status(200).json({
+        status: true,
+        message: "Cập nhật người dùng thành công!",
+      });
     } catch (error) {
-      console.error("Error in editUser:", error);
-      res.status(500).json({ status: false, message: "Internal server error" });
+      console.error("🔥 Lỗi editUser:", error);
+      res.status(500).json({
+        status: false,
+        message: "Lỗi server khi cập nhật người dùng!",
+      });
     }
   },
 
@@ -107,8 +112,8 @@ module.exports = {
 
       const affectedRows = await User.destroy({
         where: {
-          id: id,
-          role: { [Op.ne]: "admin" }, // Ngăn Admin tự xóa Admin khác
+          id,
+          role: { [Op.ne]: "admin" },
         },
       });
 
@@ -119,12 +124,16 @@ module.exports = {
         });
       }
 
-      res
-        .status(200)
-        .json({ status: true, message: "Xóa người dùng thành công." });
+      res.status(200).json({
+        status: true,
+        message: "Xóa người dùng thành công!",
+      });
     } catch (error) {
-      console.error("Error in removeUser:", error);
-      res.status(500).json({ status: false, message: "Internal server error" });
+      console.error("🔥 Lỗi removeUser:", error);
+      res.status(500).json({
+        status: false,
+        message: "Lỗi server khi xóa người dùng!",
+      });
     }
   },
 };
