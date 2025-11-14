@@ -48,7 +48,7 @@ module.exports = {
       doctor.tinh_trang = 1;
       await doctor.save();
 
-      const loginUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/dang-nhap`;
+      const loginUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/login`;
       const mailOptions = {
         from: `"Smart Blood Donation" <${process.env.MAIL_USER}>`,
         to: doctor.email,

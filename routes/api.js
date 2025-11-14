@@ -10,11 +10,16 @@ const {
   ResetPasswordController,
 } = require("../controllers");
 
+const LoadProfileController = require("../controllers/donor/LoadProfileController");
+const InventoryController = require("../controllers/doctor/InventoryController");
+
 const BloodInventoryController = require("../controllers/doctor/BloodInventoryController");
 const DoctorProfileController = require("../controllers/doctor/DoctorProfileController");
 const ProfileController = require("../controllers/ProfileController");
 const ChangePasswordController = require("../controllers/ChangePassController");
 const NewsController = require("../controllers/NewsController");
+const DonationSitesController = require("../controllers/donor/DonationSitesController");
+const AppointmentController = require("../controllers/donor/AppointmentController");
 
 const AdminController = require("../controllers/admin/AdminController");
 const AcpDoctorController = require("../controllers/admin/AcpDoctorController");
@@ -25,14 +30,19 @@ const CampaignsController = require("../controllers/admin/CampaignsController");
 const DashboardController = require("../controllers/admin/DashboardController");
 const ChangePassDoctorController = require("../controllers/doctor/ChangePassController");
 
+<<<<<<< HEAD
 const InventoryController = require("../controllers/admin/InventoryController");
 const AppointmentController = require("../controllers/admin/AppointmentController");
 const FeedbackController = require("../controllers/admin/FeedbackController");
 
+=======
+// ==================== MIDDLEWARES ====================
+>>>>>>> 56e03fdb0b163022267b5330f263f8a82af9492b
 const verifyToken = require("../middlewares/verifyToken");
 const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
+const BookingDonationRequest = require("../requests/client/BookingDonationRequest");
 
 // auth routes
 router.post(
@@ -52,13 +62,22 @@ router.post("/reset-password", ResetPasswordController.resetPassword);
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 
+<<<<<<< HEAD
 // donor routes
+=======
+>>>>>>> 56e03fdb0b163022267b5330f263f8a82af9492b
 const donorRouter = express.Router();
 
 donorRouter.get("/check-token", DonorController.checkToken);
 donorRouter.get("/profile", ProfileController.getProfile);
 donorRouter.put("/profile", ProfileController.updateProfile);
 donorRouter.put("/change-password", ChangePasswordController.changePassword);
+donorRouter.get("/me", LoadProfileController.me);
+donorRouter.get("/donation-sites", DonationSitesController.getAll);
+donorRouter.post("/donation-appointments", BookingDonationRequest, AppointmentController.create);
+donorRouter.get("/donation-appointments", AppointmentController.myList);
+donorRouter.post("/donation-appointments/:id/cancel", AppointmentController.cancel);
+
 
 // Bọc middleware verifyToken cho toàn bộ donor
 router.use("/donor", verifyToken("donor"), donorRouter);
@@ -70,6 +89,7 @@ doctorRouter.get("/check-token", DoctorController.checkToken);
 doctorRouter.get("/profile", DoctorProfileController.getProfile);
 doctorRouter.put("/profile", DoctorProfileController.updateProfile);
 doctorRouter.put("/change-password", ChangePassDoctorController.changePassword);
+doctorRouter.get("/inventory/current", InventoryController.current);
 
 doctorRouter.get("/blood-inventory", BloodInventoryController.getAll);
 doctorRouter.post("/blood-inventory", BloodInventoryController.create);
