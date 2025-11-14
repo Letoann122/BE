@@ -64,6 +64,9 @@ donorRouter.put("/change-password", ChangePasswordController.changePassword);
 donorRouter.get("/me", LoadProfileController.me);
 donorRouter.get("/donation-sites", DonationSitesController.getAll);
 donorRouter.post("/donation-appointments", BookingDonationRequest, AppointmentController.create);
+donorRouter.get("/donation-appointments", AppointmentController.myList);
+donorRouter.post("/donation-appointments/:id/cancel", AppointmentController.cancel);
+
 
 // Bọc middleware verifyToken cho toàn bộ /donor
 router.use("/donor", verifyToken("donor"), donorRouter);
