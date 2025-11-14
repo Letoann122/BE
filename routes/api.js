@@ -30,14 +30,11 @@ const CampaignsController = require("../controllers/admin/CampaignsController");
 const DashboardController = require("../controllers/admin/DashboardController");
 const ChangePassDoctorController = require("../controllers/doctor/ChangePassController");
 
-<<<<<<< HEAD
 const InventoryController = require("../controllers/admin/InventoryController");
 const AppointmentController = require("../controllers/admin/AppointmentController");
 const FeedbackController = require("../controllers/admin/FeedbackController");
 
-=======
 // ==================== MIDDLEWARES ====================
->>>>>>> 56e03fdb0b163022267b5330f263f8a82af9492b
 const verifyToken = require("../middlewares/verifyToken");
 const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
@@ -62,10 +59,7 @@ router.post("/reset-password", ResetPasswordController.resetPassword);
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 
-<<<<<<< HEAD
 // donor routes
-=======
->>>>>>> 56e03fdb0b163022267b5330f263f8a82af9492b
 const donorRouter = express.Router();
 
 donorRouter.get("/check-token", DonorController.checkToken);
@@ -74,10 +68,16 @@ donorRouter.put("/profile", ProfileController.updateProfile);
 donorRouter.put("/change-password", ChangePasswordController.changePassword);
 donorRouter.get("/me", LoadProfileController.me);
 donorRouter.get("/donation-sites", DonationSitesController.getAll);
-donorRouter.post("/donation-appointments", BookingDonationRequest, AppointmentController.create);
+donorRouter.post(
+  "/donation-appointments",
+  BookingDonationRequest,
+  AppointmentController.create
+);
 donorRouter.get("/donation-appointments", AppointmentController.myList);
-donorRouter.post("/donation-appointments/:id/cancel", AppointmentController.cancel);
-
+donorRouter.post(
+  "/donation-appointments/:id/cancel",
+  AppointmentController.cancel
+);
 
 // Bọc middleware verifyToken cho toàn bộ donor
 router.use("/donor", verifyToken("donor"), donorRouter);
