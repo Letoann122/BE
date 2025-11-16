@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-// ==================== CONTROLLERS ====================
 const {
   RegisterController,
   ActivateController,
@@ -50,6 +49,7 @@ router.post("/reset-password", ResetPasswordController.resetPassword);
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 
+// donor routes
 const donorRouter = express.Router();
 
 donorRouter.get("/check-token", DonorController.checkToken);
@@ -58,10 +58,16 @@ donorRouter.put("/profile", ProfileController.updateProfile);
 donorRouter.put("/change-password", ChangePasswordController.changePassword);
 donorRouter.get("/me", LoadProfileController.me);
 donorRouter.get("/donation-sites", DonationSitesController.getAll);
-donorRouter.post("/donation-appointments", BookingDonationRequest, AppointmentController.create);
+donorRouter.post(
+  "/donation-appointments",
+  BookingDonationRequest,
+  AppointmentController.create
+);
 donorRouter.get("/donation-appointments", AppointmentController.myList);
-donorRouter.post("/donation-appointments/:id/cancel", AppointmentController.cancel);
-
+donorRouter.post(
+  "/donation-appointments/:id/cancel",
+  AppointmentController.cancel
+);
 
 router.use("/donor", verifyToken("donor"), donorRouter);
 
@@ -103,6 +109,25 @@ adminRouter.get("/doctors/pending", AcpDoctorController.getPending);
 adminRouter.put("/doctors/:id/approve", AcpDoctorController.approve);
 adminRouter.put("/doctors/:id/reject", AcpDoctorController.reject);
 adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
+
+// Quản lý kho máu
+adminRouter.get("/inventory", InventoryController.getAllInventory);
+
+// Quản lý lịch hẹn
+adminRouter.get("/appointments", AppointmentController.getAllAppointments);
+adminRouter.put(
+  "/appointments/:id/approve",
+  AppointmentController.approveAppointment
+);
+adminRouter.put(
+  "/appointments/:id/reject",
+  AppointmentController.rejectAppointment
+);
+
+// Quản lý Feedback
+adminRouter.get("/feedback", FeedbackController.getAllFeedback);
+adminRouter.put("/feedback/:id/read", FeedbackController.markAsRead);
+adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);

@@ -52,7 +52,7 @@ module.exports = {
         address,
         password: hashedPassword,
         role: role || "donor",
-        tinh_trang: 0, 
+        tinh_trang: 0,
       };
       if (role === "donor") {
         userData.blood_group = blood_group;
@@ -72,19 +72,20 @@ module.exports = {
             <p>Nếu bạn không đăng ký, vui lòng bỏ qua email này.</p>
           `,
         });
-      }
-      else if (role === "doctor") {
+      } else if (role === "doctor") {
         userData.blood_group = null;
         userData.medical_history = null;
         userData.hash_active = null;
-        userData.tinh_trang = 0; 
+        userData.tinh_trang = 0;
       }
       const user = await User.create(userData);
       let message = "";
       if (role === "donor") {
-        message = "Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.";
+        message =
+          "Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.";
       } else if (role === "doctor") {
-        message = "Đăng ký thành công! Tài khoản bác sĩ của bạn đang được xét duyệt bởi quản trị viên.";
+        message =
+          "Đăng ký thành công! Tài khoản bác sĩ của bạn đang được xét duyệt bởi quản trị viên.";
       } else {
         message = "Đăng ký thành công!";
       }
