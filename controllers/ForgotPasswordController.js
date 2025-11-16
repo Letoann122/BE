@@ -19,7 +19,7 @@ module.exports = {
       user.reset_expires = new Date(Date.now() + 3600000); // 1 giờ
       await user.save();
 
-      const resetLink = `${process.env.FRONTEND_URL}/doi-mat-khau?token=${resetToken}`;
+      const resetLink = `${process.env.FRONTEND_URL}/change-password?token=${resetToken}`;
       await transporter.sendMail({
         from: `"Smart Blood Donation" <${process.env.MAIL_USER}>`,
         to: email,

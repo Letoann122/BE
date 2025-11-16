@@ -31,16 +31,13 @@ const CampaignsController = require("../controllers/admin/CampaignsController");
 const DashboardController = require("../controllers/admin/DashboardController");
 const ChangePassDoctorController = require("../controllers/doctor/ChangePassController");
 
-// ==================== MIDDLEWARES ====================
 const verifyToken = require("../middlewares/verifyToken");
 const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const BookingDonationRequest = require("../requests/client/BookingDonationRequest");
 
-// ======================================================
-// =============== AUTHENTICATION ROUTES ================
-// ======================================================
+
 router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
 router.get("/logout", LogoutController.logout);
@@ -49,9 +46,7 @@ router.get("/activate/:token", ActivateController.activate);
 router.post("/forgot-password", ForgotPasswordController.forgotPassword);
 router.post("/reset-password", ResetPasswordController.resetPassword);
 
-// ======================================================
-// ===================== NEWS ROUTES ====================
-// ======================================================
+
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 
@@ -68,12 +63,9 @@ donorRouter.get("/donation-appointments", AppointmentController.myList);
 donorRouter.post("/donation-appointments/:id/cancel", AppointmentController.cancel);
 
 
-// Bọc middleware verifyToken cho toàn bộ /donor
 router.use("/donor", verifyToken("donor"), donorRouter);
 
-// ======================================================
-// ===================== DOCTOR ROUTES ==================
-// ======================================================
+
 const doctorRouter = express.Router();
 
 doctorRouter.get("/check-token", DoctorController.checkToken);
@@ -88,12 +80,9 @@ doctorRouter.post("/blood-inventory/filter", BloodInventoryController.filter);
 doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
 doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
 
-// Bọc middleware verifyToken cho toàn bộ /doctor
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
-// ======================================================
-// ===================== ADMIN ROUTES ===================
-// ======================================================
+
 const adminRouter = express.Router();
 
 adminRouter.get("/check-token", AdminController.checkToken);
@@ -105,8 +94,7 @@ adminRouter.delete("/users/:id", AdminDonorController.removeUser);
 
 // Chiến dịch hiến máu
 adminRouter.post("/Campaigns", CampaignsController.createCampaign);
-router.get("/Campaigns", CampaignsController.getAllCampaigns); // public
-
+adminRouter.get("/Campaigns", CampaignsController.getAllCampaigns);
 // Dashboard
 adminRouter.get("/dashboard", DashboardController.getDashboardStats);
 
@@ -119,7 +107,5 @@ adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
 
-// ======================================================
-// ===================== EXPORT ROUTER ==================
-// ======================================================
+
 module.exports = router;
