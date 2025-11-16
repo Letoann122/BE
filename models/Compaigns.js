@@ -4,7 +4,6 @@ const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Campaign extends Model {
     static associate(models) {
-      // Định nghĩa mối quan hệ: Một chiến dịch thuộc về một Người dùng (qua 'created_by')
       Campaign.belongsTo(models.User, {
         foreignKey: "created_by",
         as: "creator",

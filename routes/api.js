@@ -30,24 +30,14 @@ const CampaignsController = require("../controllers/admin/CampaignsController");
 const DashboardController = require("../controllers/admin/DashboardController");
 const ChangePassDoctorController = require("../controllers/doctor/ChangePassController");
 
-const InventoryController = require("../controllers/admin/InventoryController");
-const AppointmentController = require("../controllers/admin/AppointmentController");
-const FeedbackController = require("../controllers/admin/FeedbackController");
-
-// ==================== MIDDLEWARES ====================
 const verifyToken = require("../middlewares/verifyToken");
 const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const BookingDonationRequest = require("../requests/client/BookingDonationRequest");
 
-// auth routes
-router.post(
-  "/register",
-  CreateTaiKhoanRequest,
-  validateRequest,
-  RegisterController.register
-);
+
+router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
 router.get("/logout", LogoutController.logout);
 
@@ -55,7 +45,7 @@ router.get("/activate/:token", ActivateController.activate);
 router.post("/forgot-password", ForgotPasswordController.forgotPassword);
 router.post("/reset-password", ResetPasswordController.resetPassword);
 
-// news routes
+
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 
@@ -79,10 +69,9 @@ donorRouter.post(
   AppointmentController.cancel
 );
 
-// Bọc middleware verifyToken cho toàn bộ donor
 router.use("/donor", verifyToken("donor"), donorRouter);
 
-// doctor routes
+
 const doctorRouter = express.Router();
 
 doctorRouter.get("/check-token", DoctorController.checkToken);
@@ -97,8 +86,8 @@ doctorRouter.post("/blood-inventory/filter", BloodInventoryController.filter);
 doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
 doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
 
-// Bọc middleware verifyToken cho toàn bộ doctor
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
+
 
 const adminRouter = express.Router();
 
@@ -111,8 +100,7 @@ adminRouter.delete("/users/:id", AdminDonorController.removeUser);
 
 // Chiến dịch hiến máu
 adminRouter.post("/Campaigns", CampaignsController.createCampaign);
-router.get("/Campaigns", CampaignsController.getAllCampaigns);
-
+adminRouter.get("/Campaigns", CampaignsController.getAllCampaigns);
 // Dashboard
 adminRouter.get("/dashboard", DashboardController.getDashboardStats);
 
@@ -143,5 +131,6 @@ adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
+
 
 module.exports = router;
