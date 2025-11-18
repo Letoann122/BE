@@ -29,6 +29,8 @@ const AdminDonorController = require("../controllers/admin/AdminDonorController"
 const CampaignsController = require("../controllers/admin/CampaignsController");
 const DashboardController = require("../controllers/admin/DashboardController");
 const ChangePassDoctorController = require("../controllers/doctor/ChangePassController");
+const DonationAppointmentController = require("../controllers/doctor/DonationAppointmentController");
+
 
 const verifyToken = require("../middlewares/verifyToken");
 const validateRequest = require("../middlewares/validateRequest");
@@ -111,23 +113,27 @@ adminRouter.put("/doctors/:id/reject", AcpDoctorController.reject);
 adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
 
 // Quản lý kho máu
-adminRouter.get("/inventory", InventoryController.getAllInventory);
+// adminRouter.get("/inventory", InventoryController.getAllInventory);
 
-// Quản lý lịch hẹn
-adminRouter.get("/appointments", AppointmentController.getAllAppointments);
-adminRouter.put(
-  "/appointments/:id/approve",
-  AppointmentController.approveAppointment
+doctorRouter.get(
+  "/donation-appointments",
+  DonationAppointmentController.index
 );
-adminRouter.put(
-  "/appointments/:id/reject",
-  AppointmentController.rejectAppointment
+
+doctorRouter.post(
+  "/donation-appointments/approve",
+  DonationAppointmentController.approve
+);
+
+doctorRouter.post(
+  "/donation-appointments/reject",
+  DonationAppointmentController.reject
 );
 
 // Quản lý Feedback
-adminRouter.get("/feedback", FeedbackController.getAllFeedback);
-adminRouter.put("/feedback/:id/read", FeedbackController.markAsRead);
-adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
+// adminRouter.get("/feedback", FeedbackController.getAllFeedback);
+// adminRouter.put("/feedback/:id/read", FeedbackController.markAsRead);
+// adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
