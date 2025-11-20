@@ -10,6 +10,10 @@ module.exports = (sequelize, DataTypes) => {
       volume_ml: DataTypes.INTEGER,
       collected_at: DataTypes.DATE,
       screened_ok: DataTypes.TINYINT,
+      // nếu muốn có luôn:
+      confirmed_by_doctor_id: DataTypes.BIGINT,
+      confirmed_at: DataTypes.DATE,
+      notes: DataTypes.STRING(255),
     },
     { tableName: "donations", timestamps: false }
   );

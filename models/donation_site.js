@@ -17,8 +17,9 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   DonationSite.associate = (models) => {
-    DonationSite.hasMany(models.AppointmentSlot, { foreignKey: "donation_site_id" });
-    DonationSite.hasMany(models.Appointment, { foreignKey: "donation_site_id" });
+  DonationSite.belongsTo(models.Hospital, { foreignKey: "hospital_id" });
+  DonationSite.hasMany(models.AppointmentSlot, { foreignKey: "donation_site_id" });
+  DonationSite.hasMany(models.Appointment, { foreignKey: "donation_site_id" });
   };
 
   return DonationSite;

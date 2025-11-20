@@ -29,6 +29,8 @@ const AdminDonorController = require("../controllers/admin/AdminDonorController"
 const CampaignsController = require("../controllers/admin/CampaignsController");
 const DashboardController = require("../controllers/admin/DashboardController");
 const ChangePassDoctorController = require("../controllers/doctor/ChangePassController");
+const DonationAppointmentController = require("../controllers/doctor/DonationAppointmentController");
+const DonationController = require("../controllers/doctor/DonationController");
 
 const verifyToken = require("../middlewares/verifyToken");
 const validateRequest = require("../middlewares/validateRequest");
@@ -79,12 +81,42 @@ doctorRouter.get("/profile", DoctorProfileController.getProfile);
 doctorRouter.put("/profile", DoctorProfileController.updateProfile);
 doctorRouter.put("/change-password", ChangePassDoctorController.changePassword);
 doctorRouter.get("/inventory/current", InventoryController.current);
+doctorRouter.get(
+  "/donation-appointments",
+  DonationAppointmentController.index
+);
+
+doctorRouter.post(
+  "/donation-appointments/approve",
+  DonationAppointmentController.approve
+);
+
+doctorRouter.post(
+  "/donation-appointments/reject",
+  DonationAppointmentController.reject
+);
 
 doctorRouter.get("/blood-inventory", BloodInventoryController.getAll);
 doctorRouter.post("/blood-inventory", BloodInventoryController.create);
 doctorRouter.post("/blood-inventory/filter", BloodInventoryController.filter);
 doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
 doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
+doctorRouter.get(
+  "/donation-appointments",
+  DonationController.index
+);
+doctorRouter.post("/donations/complete",DonationController.completeDonation);
+// router.get(
+//   "/donation-appointments",
+//   doctorAuth,
+//   DonationAppointmentController.index
+// );
+
+// router.post(
+//   "/donations/complete",
+//   doctorAuth,
+//   DonationAppointmentController.completeDonation
+// );
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
@@ -111,23 +143,14 @@ adminRouter.put("/doctors/:id/reject", AcpDoctorController.reject);
 adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
 
 // Quản lý kho máu
-adminRouter.get("/inventory", InventoryController.getAllInventory);
+// adminRouter.get("/inventory", InventoryController.getAllInventory);
 
-// Quản lý lịch hẹn
-adminRouter.get("/appointments", AppointmentController.getAllAppointments);
-adminRouter.put(
-  "/appointments/:id/approve",
-  AppointmentController.approveAppointment
-);
-adminRouter.put(
-  "/appointments/:id/reject",
-  AppointmentController.rejectAppointment
-);
+
 
 // Quản lý Feedback
-adminRouter.get("/feedback", FeedbackController.getAllFeedback);
-adminRouter.put("/feedback/:id/read", FeedbackController.markAsRead);
-adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
+// adminRouter.get("/feedback", FeedbackController.getAllFeedback);
+// adminRouter.put("/feedback/:id/read", FeedbackController.markAsRead);
+// adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
