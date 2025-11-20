@@ -35,16 +35,21 @@ const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const BookingDonationRequest = require("../requests/client/BookingDonationRequest");
+const InventoryAdminController = require("../controllers/admin/InventoryAdminController");
+const AppointmentAdminController = require("../controllers/admin/AppointmentAdminController");
 
-
-router.post("/register", CreateTaiKhoanRequest, validateRequest, RegisterController.register);
+router.post(
+  "/register",
+  CreateTaiKhoanRequest,
+  validateRequest,
+  RegisterController.register
+);
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
 router.get("/logout", LogoutController.logout);
 
 router.get("/activate/:token", ActivateController.activate);
 router.post("/forgot-password", ForgotPasswordController.forgotPassword);
 router.post("/reset-password", ResetPasswordController.resetPassword);
-
 
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
@@ -71,7 +76,6 @@ donorRouter.post(
 
 router.use("/donor", verifyToken("donor"), donorRouter);
 
-
 const doctorRouter = express.Router();
 
 doctorRouter.get("/check-token", DoctorController.checkToken);
@@ -87,7 +91,6 @@ doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
 doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
-
 
 const adminRouter = express.Router();
 
@@ -111,26 +114,25 @@ adminRouter.put("/doctors/:id/reject", AcpDoctorController.reject);
 adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
 
 // Quản lý kho máu
-adminRouter.get("/inventory", InventoryController.getAllInventory);
+adminRouter.get("/inventory", InventoryAdminController.getAllInventory);
 
 // Quản lý lịch hẹn
-adminRouter.get("/appointments", AppointmentController.getAllAppointments);
+adminRouter.get("/appointments", AppointmentAdminController.getAllAppointments);
 adminRouter.put(
   "/appointments/:id/approve",
-  AppointmentController.approveAppointment
+  AppointmentAdminController.approveAppointment
 );
 adminRouter.put(
   "/appointments/:id/reject",
-  AppointmentController.rejectAppointment
+  AppointmentAdminController.rejectAppointment
 );
 
 // Quản lý Feedback
-adminRouter.get("/feedback", FeedbackController.getAllFeedback);
-adminRouter.put("/feedback/:id/read", FeedbackController.markAsRead);
-adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
+// adminRouter.get("/feedback", FeedbackController.getAllFeedback);
+// adminRouter.put("/feedback/:id/read", FeedbackController.markAsRead);
+// adminRouter.delete("/feedback/:id", FeedbackController.deleteFeedback);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
-
 
 module.exports = router;

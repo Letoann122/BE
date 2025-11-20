@@ -1,4 +1,3 @@
-// controllers/admin/AppointmentController.js
 const { Appointment, User } = require("../../models");
 const { Op } = require("sequelize");
 const transporter = require("../../config/mailer");
@@ -24,7 +23,7 @@ module.exports = {
         where: whereCondition,
         limit,
         offset,
-        order: [["appointment_date", "ASC"]],
+        order: [["scheduled_at", "ASC"]],
         include: [
           {
             model: User,
