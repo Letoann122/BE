@@ -9,7 +9,6 @@ module.exports = (sequelize, DataTypes) => {
       donation_site_id: DataTypes.BIGINT,
       appointment_slot_id: DataTypes.BIGINT,
 
-      // để NULL, trigger sẽ tự generate
       appointment_code: {
         type: DataTypes.STRING(50),
         allowNull: true,
@@ -20,6 +19,11 @@ module.exports = (sequelize, DataTypes) => {
       preferred_volume_ml: DataTypes.INTEGER,
       status: DataTypes.STRING(20),
       notes: DataTypes.TEXT,
+
+      // ➕ thêm 3 field này
+      approved_by_doctor_id: DataTypes.BIGINT,
+      approved_at: DataTypes.DATE,
+      rejected_reason: DataTypes.STRING(255),
 
       created_at: {
         type: DataTypes.DATE,
@@ -46,6 +50,12 @@ module.exports = (sequelize, DataTypes) => {
 
     Appointment.belongsTo(models.AppointmentSlot, {
       foreignKey: "appointment_slot_id",
+    });
+
+    // ➕ để lấy tên bác sĩ duyệt
+    Appointment.belongsTo(models.Doctor, {
+      foreignKey: "approved_by_doctor_id",
+      as: "approved_doctor",
     });
   };
 

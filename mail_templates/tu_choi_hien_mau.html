@@ -1,0 +1,23 @@
+<h3>Chào {{ho_ten}}</h3>
+
+<p>
+  Rất tiếc, lịch hiến máu với mã <b>{{appointment_code}}</b> của bạn 
+  đã <b>KHÔNG ĐƯỢC DUYỆT</b>.
+</p>
+
+<ul>
+  <li>Ngày dự kiến: <b>{{ngay_hien}}</b></li>
+  <li>Khung giờ: <b>{{khung_gio}}</b></li>
+  <li>Địa điểm: <b>{{dia_diem}}</b></li>
+  <li>Bệnh viện: <b>{{benh_vien}}</b></li>
+</ul>
+
+<p><b>Lý do từ chối:</b> {{rejected_reason}}</p>
+
+{{#if ghi_chu}}
+<p><b>Ghi chú thêm:</b> {{ghi_chu}}</p>
+{{/if}}
+
+<p>Nếu bạn vẫn muốn đăng ký hiến máu, vui lòng đặt lại lịch hoặc liên hệ với chúng tôi để được hỗ trợ.</p>
+
+<p>Trân trọng,<br />Smart Blood Donation System</p>

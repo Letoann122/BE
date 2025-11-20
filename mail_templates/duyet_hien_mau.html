@@ -1,0 +1,22 @@
+<h3>Chào {{ho_ten}}</h3>
+
+<p>
+  Lịch hiến máu của bạn với mã <b>{{appointment_code}}</b> đã được 
+  <b>DUYỆT THÀNH CÔNG</b>.
+</p>
+
+<ul>
+  <li>Ngày hiến máu: <b>{{ngay_hien}}</b></li>
+  <li>Khung giờ: <b>{{khung_gio}}</b></li>
+  <li>Địa điểm: <b>{{dia_diem}}</b></li>
+  <li>Bệnh viện: <b>{{benh_vien}}</b></li>
+  <li>Thể tích đăng ký: <b>{{the_tich}} ml</b></li>
+</ul>
+
+{{#if ghi_chu}}
+<p><b>Ghi chú:</b> {{ghi_chu}}</p>
+{{/if}}
+
+<p>Vui lòng đến đúng giờ, mang theo giấy tờ tùy thân và ăn uống, nghỉ ngơi hợp lý trước khi hiến máu.</p>
+
+<p>Trân trọng,<br />Smart Blood Donation System</p>
