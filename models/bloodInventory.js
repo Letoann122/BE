@@ -1,4 +1,6 @@
 // models/bloodInventory.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const BloodInventory = sequelize.define(
     "BloodInventory",
@@ -8,11 +10,15 @@ module.exports = (sequelize, DataTypes) => {
         autoIncrement: true,
         primaryKey: true,
       },
-      blood_type_id: {
+      donation_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true, // log nào không gắn từ donations thì cứ để NULL
+      },
+      hospital_id: {
         type: DataTypes.BIGINT,
         allowNull: false,
       },
-      user_id: {
+      blood_type_id: {
         type: DataTypes.BIGINT,
         allowNull: false,
       },
@@ -32,6 +38,8 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("full", "expiring", "low", "critical"),
         defaultValue: "full",
       },
+      created_at: DataTypes.DATE,
+      updated_at: DataTypes.DATE,
     },
     {
       tableName: "blood_inventory",
@@ -41,15 +49,20 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  // ✅ Quan trọng: định nghĩa associations trong 1 callback
   BloodInventory.associate = (models) => {
     BloodInventory.belongsTo(models.BloodType, {
       foreignKey: "blood_type_id",
       as: "blood_type",
     });
-    BloodInventory.belongsTo(models.User, {
-      foreignKey: "user_id",
-      as: "user",
+
+    BloodInventory.belongsTo(models.Hospital, {
+      foreignKey: "hospital_id",
+      as: "hospital",
+    });
+
+    BloodInventory.belongsTo(models.Donation, {
+      foreignKey: "donation_id",
+      as: "donation",
     });
   };
 

@@ -85,30 +85,18 @@ doctorRouter.get("/profile", DoctorProfileController.getProfile);
 doctorRouter.put("/profile", DoctorProfileController.updateProfile);
 doctorRouter.put("/change-password", ChangePassDoctorController.changePassword);
 doctorRouter.get("/inventory/current", InventoryController.current);
-doctorRouter.get(
-  "/donation-appointments",
-  DonationAppointmentController.index
-);
+doctorRouter.get("/donation-appointments",DonationAppointmentController.index);
 
-doctorRouter.post(
-  "/donation-appointments/approve",
-  DonationAppointmentController.approve
-);
+doctorRouter.post("/donation-appointments/approve",DonationAppointmentController.approve);
 
-doctorRouter.post(
-  "/donation-appointments/reject",
-  DonationAppointmentController.reject
-);
+doctorRouter.post("/donation-appointments/reject",DonationAppointmentController.reject);
 
 doctorRouter.get("/blood-inventory", BloodInventoryController.getAll);
 doctorRouter.post("/blood-inventory", BloodInventoryController.create);
 doctorRouter.post("/blood-inventory/filter", BloodInventoryController.filter);
 doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
 doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
-doctorRouter.get(
-  "/donation-appointments",
-  DonationController.index
-);
+doctorRouter.get("/donation-appointments/approved",DonationController.index);
 doctorRouter.post("/donations/complete",DonationController.completeDonation);
 // router.get(
 //   "/donation-appointments",
