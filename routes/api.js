@@ -39,6 +39,8 @@ const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest"
 const BookingDonationRequest = require("../requests/client/BookingDonationRequest");
 const InventoryAdminController = require("../controllers/admin/InventoryAdminController");
 const AppointmentAdminController = require("../controllers/admin/AppointmentAdminController");
+const DonorManagementController = require("../controllers/doctor/DonorManagementController");
+const DonorDetailController = require("../controllers/doctor/DonorDetailController");
 
 router.post(
   "/register",
@@ -98,17 +100,9 @@ doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
 doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
 doctorRouter.get("/donation-appointments/approved",DonationController.index);
 doctorRouter.post("/donations/complete",DonationController.completeDonation);
-// router.get(
-//   "/donation-appointments",
-//   doctorAuth,
-//   DonationAppointmentController.index
-// );
-
-// router.post(
-//   "/donations/complete",
-//   doctorAuth,
-//   DonationAppointmentController.completeDonation
-// );
+doctorRouter.get("/donors", DonorManagementController.list);
+doctorRouter.post("/donors/create", DonorManagementController.create);
+doctorRouter.get("/donors/:id", DonorDetailController.detail);
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
