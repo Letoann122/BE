@@ -4,12 +4,9 @@ const { Donor, User, BloodType, Donation, Sequelize } = require("../../models");
 const bcrypt = require("bcrypt");
 
 module.exports = {
-  // ===================================================
-  //                LẤY DANH SÁCH DONOR
-  // ===================================================
+
   async list(req, res) {
     try {
-      // Lấy tất cả donor + join user + join blood type
       const donors = await Donor.findAll({
         include: [
           {
@@ -23,11 +20,7 @@ module.exports = {
         ],
         order: [["id", "ASC"]],
       });
-
-      // Danh sách user_id
       const donorIds = donors.map((d) => d.user_id);
-
-      // Thống kê Donation
       const donationStats = await Donation.findAll({
         where: { donor_user_id: donorIds },
         attributes: [
@@ -55,31 +48,22 @@ module.exports = {
           address: d.address,
           phone: d.phone,
           email: d.email,
-
           bloodType: d.BloodType
             ? `${d.BloodType.abo}${d.BloodType.rh}`
             : "Không rõ",
-
           lastDonation: stat?.lastDonation
             ? stat.lastDonation.toISOString().slice(0, 10)
             : "Chưa hiến",
-
           totalDonation: stat?.totalDonation || 0,
-
           status: d.tinh_trang === 1 ? "Hoạt động" : "Tạm ngừng",
         };
       });
-
       return res.json({ status: true, data });
     } catch (err) {
       console.error("❌ Lỗi list donors:", err);
       return res.status(500).json({ status: false, error: err.message });
     }
   },
-
-  // ===================================================
-  //                TẠO DONOR MỚI
-  // ===================================================
   async create(req, res) {
   try {
     const {
@@ -91,16 +75,12 @@ module.exports = {
       address,
       blood_type_id
     } = req.body;
-
-    // Validate
     if (!full_name || !email || !phone || !birthday || !gender || !address || !blood_type_id) {
       return res.status(400).json({
         status: false,
         message: "Vui lòng nhập đầy đủ thông tin!"
       });
     }
-
-    // Check email trùng
     const existed = await User.findOne({ where: { email } });
     if (existed) {
       return res.status(400).json({
@@ -108,10 +88,7 @@ module.exports = {
         message: "Email đã tồn tại!"
       });
     }
-
     const hash = await bcrypt.hash("123456", 10);
-
-    // 1️⃣ Tạo user
     const user = await User.create({
       full_name,
       email,
@@ -123,29 +100,22 @@ module.exports = {
       password: hash,
       tinh_trang: 1,
     });
-
-    // 2️⃣ Trigger tạo donor tự chạy → cập nhật blood_type_id thủ công
     await Donor.update(
       { blood_type_id },
       { where: { user_id: user.id } }
     );
-
-    // 3️⃣ LẤY ABO + Rh rồi update users.blood_group
     const bt = await BloodType.findByPk(blood_type_id);
-
     if (bt) {
       await User.update(
         { blood_group: `${bt.abo}${bt.rh}` },
         { where: { id: user.id } }
       );
     }
-
     return res.json({
       status: true,
       message: "Tạo donor thành công!",
       data: { user_id: user.id }
     });
-
   } catch (error) {
     console.error("❌ Lỗi tạo donor:", error);
     return res.status(500).json({

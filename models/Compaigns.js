@@ -47,7 +47,15 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-
+      locate_type: {
+          type: DataTypes.ENUM("custom", "donation_site"),
+          allowNull: false,
+          defaultValue: "custom",
+      },
+      donation_site_id: {
+          type: DataTypes.BIGINT,
+          allowNull: true,
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,
