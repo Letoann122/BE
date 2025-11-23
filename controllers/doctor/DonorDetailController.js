@@ -72,13 +72,7 @@ module.exports = {
       // 3️⃣ Lần hiến máu gần nhất
       const lastDonation = history.length > 0 ? history[0] : null;
 
-      // 4️⃣ Tính ngày có thể hiến lại (12 tuần = 84 ngày)
-      let nextDonationDate = null;
-      if (lastDonation && lastDonation.collected_at) {
-        const d = new Date(lastDonation.collected_at);
-        d.setDate(d.getDate() + 84);
-        nextDonationDate = d.toISOString().slice(0, 10);
-      }
+    
 
       // 5️⃣ Nhóm máu hiển thị
       const bloodType = donor.BloodType
@@ -122,7 +116,6 @@ module.exports = {
 
           lastDonation: lastDonation ? mapDonationRecord(lastDonation) : null,
 
-          nextDonationDate,
 
           history: history.map(mapDonationRecord),
         },

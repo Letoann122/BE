@@ -1,199 +1,401 @@
+// controllers/doctor/CampaignsController.js
 "use strict";
 
-const { Campaign, Appointment, User } = require("../../models");
-const { Op } = require("sequelize");
+const {
+  Campaign,
+  User,
+  DonationSite,
+  Appointment,
+} = require("../../models");
+const { Op, fn, col } = require("sequelize"); // thêm fn, col để dùng COUNT
+
+// Helper
+const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
+const getLastDay = (y, m) => new Date(y, m, 0).getDate();
 
 module.exports = {
+  // ============================================================================
+  // 1. GET CAMPAIGN LIST
+  // ============================================================================
+  async getAllCampaigns(req, res) {
+    try {
+      let { type, time, status, start_from, start_to } = req.query;
+      const where = {};
 
-    async getAllCampaigns(req, res) {
-        try {
-            let { type, time } = req.query;
+      // FILTER TYPE
+      if (type === "0") where.is_emergency = 0;
+      if (type === "1") where.is_emergency = 1;
 
-            const where = {};
+      // FILTER STATUS
+      if (status) {
+        where.status = status;
+      }
 
-            if (type === "0") where.is_emergency = 0;
-            if (type === "1") where.is_emergency = 1;
+      // FILTER TỪ NGÀY -> ĐẾN NGÀY (custom)
+      if (start_from && start_to) {
+        where.start_date = {
+          [Op.between]: [start_from, start_to],
+        };
+      }
 
-            const today = new Date();
-            const month = today.getMonth() + 1;
-            const year = today.getFullYear();
+      // FILTER TIME (this_month, last_month, this_year)
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth() + 1;
 
-            if (time === "this_month") {
-                where.start_date = {
-                    [Op.between]: [`${year}-${month}-01`, `${year}-${month}-31`],
-                };
-            }
-            if (time === "last_month") {
-                const lastMonth = month - 1 === 0 ? 12 : month - 1;
-                const lastYear = lastMonth === 12 ? year - 1 : year;
+      if (time === "this_month") {
+        const last = getLastDay(year, month);
+        where.start_date = {
+          [Op.between]: [
+            `${year}-${pad(month)}-01`,
+            `${year}-${pad(month)}-${pad(last)}`,
+          ],
+        };
+      }
 
-                where.start_date = {
-                    [Op.between]: [
-                        `${lastYear}-${lastMonth}-01`,
-                        `${lastYear}-${lastMonth}-31`,
-                    ],
-                };
-            }
-            if (time === "this_year") {
-                where.start_date = {
-                    [Op.between]: [`${year}-01-01`, `${year}-12-31`],
-                };
-            }
+      if (time === "last_month") {
+        const m = month - 1 === 0 ? 12 : month - 1;
+        const y = m === 12 ? year - 1 : year;
+        const last = getLastDay(y, m);
 
-            const campaigns = await Campaign.findAll({
-                where,
-                order: [["created_at", "DESC"]],
-                include: [
-                    { model: User, as: "creator" }
-                ],
-            });
+        where.start_date = {
+          [Op.between]: [
+            `${y}-${pad(m)}-01`,
+            `${y}-${pad(m)}-${pad(last)}`,
+          ],
+        };
+      }
 
-            return res.json({
-                status: true,
-                message: "Lấy danh sách chiến dịch thành công",
-                data: campaigns,
-            });
+      if (time === "this_year") {
+        where.start_date = {
+          [Op.between]: [`${year}-01-01`, `${year}-12-31`],
+        };
+      }
 
-        } catch (err) {
-            console.error("ERR getAllCampaigns:", err);
-            return res.status(500).json({
-                status: false,
-                message: "Lỗi server khi lấy danh sách chiến dịch",
-            });
-        }
-    },
-    async getCampaignDetail(req, res) {
-        try {
-            const id = req.params.id;
+      // LẤY DANH SÁCH CHIẾN DỊCH
+      const campaigns = await Campaign.findAll({
+        where,
+        include: [
+          { model: User, as: "creator", attributes: ["full_name"] },
+          { model: DonationSite, as: "donation_site" },
+        ],
+        order: [["created_at", "DESC"]],
+      });
 
-            const campaign = await Campaign.findOne({
-                where: { id },
-                include: [
-                    { model: User, as: "creator" }
-                ],
-            });
+      // Nếu không có campaign nào thì trả luôn
+      if (!campaigns.length) {
+        return res.json({ status: true, data: [] });
+      }
 
-            if (!campaign) {
-                return res.status(404).json({
-                    status: false,
-                    message: "Không tìm thấy chiến dịch",
-                });
-            }
+      // LẤY LIST ID CHIẾN DỊCH
+      const campaignIds = campaigns.map((c) => c.id);
 
-            return res.json({
-                status: true,
-                message: "Lấy chi tiết chiến dịch thành công",
-                data: campaign,
-            });
+      // ĐẾM SỐ LƯỢNG APPOINTMENT / CHIẾN DỊCH
+      const counts = await Appointment.findAll({
+        attributes: [
+          "campaign_id",
+          [fn("COUNT", col("id")), "registration_count"],
+        ],
+        where: {
+          campaign_id: {
+            [Op.in]: campaignIds,
+          },
+        },
+        group: ["campaign_id"],
+        raw: true,
+      });
 
-        } catch (err) {
-            console.error("ERR getCampaignDetail:", err);
-            return res.status(500).json({
-                status: false,
-                message: "Lỗi server",
-            });
-        }
-    },
+      const countMap = {};
+      counts.forEach((row) => {
+        countMap[row.campaign_id] = parseInt(row.registration_count, 10) || 0;
+      });
 
-    async createCampaign(req, res) {
-        try {
-            const { title, content, start_date, end_date, is_emergency, location } = req.body;
-            const createdBy = req.user.userId;
+      // GÁN registration_count VÀO TỪNG CAMPAIGN
+      campaigns.forEach((c) => {
+        const reg = countMap[c.id] || 0;
+        c.setDataValue("registration_count", reg);
+      });
 
-            if (!title || !content || !start_date || !end_date) {
-                return res.json({
-                    status: false,
-                    message: "Vui lòng nhập đầy đủ thông tin",
-                });
-            }
+      return res.json({ status: true, data: campaigns });
+    } catch (err) {
+      console.error("getAllCampaigns error:", err);
+      return res.status(500).json({
+        status: false,
+        errors: { server: [err.message] },
+      });
+    }
+  },
 
-            const newCampaign = await Campaign.create({
-                title,
-                content,
-                start_date,
-                end_date,
-                location,
-                is_emergency: is_emergency ? 1 : 0,
-                created_by: createdBy,
-            });
+  // ============================================================================
+  // 2. GET DETAIL
+  // ============================================================================
+  async getCampaignDetail(req, res) {
+    try {
+      const id = req.params.id;
 
-            return res.status(201).json({
-                status: true,
-                message: "Tạo chiến dịch thành công",
-                data: newCampaign,
-            });
+      const campaign = await Campaign.findOne({
+        where: { id },
+        include: [
+          { model: User, as: "creator", attributes: ["full_name"] },
+          { model: DonationSite, as: "donation_site" },
+        ],
+      });
 
-        } catch (err) {
-            console.error("ERR createCampaign:", err);
-            return res.status(500).json({
-                status: false,
-                message: "Lỗi server khi tạo chiến dịch",
-            });
-        }
-    },
-    async updateCampaign(req, res) {
-        try {
-            const id = req.params.id;
-            const { title, content, start_date, end_date, is_emergency, location } = req.body;
+      if (!campaign) {
+        return res.json({
+          status: false,
+          message: "Không tìm thấy chiến dịch",
+        });
+      }
 
-            const campaign = await Campaign.findByPk(id);
-            if (!campaign) {
-                return res.json({
-                    status: false,
-                    message: "Không tìm thấy chiến dịch",
-                });
-            }
+      return res.json({ status: true, data: campaign });
 
-            await campaign.update({
-                title,
-                content,
-                start_date,
-                end_date,
-                location,
-                is_emergency: is_emergency ? 1 : 0,
-            });
+    } catch (err) {
+      console.error("getCampaignDetail error:", err);
+      return res.status(500).json({
+        status: false,
+        message: err.message,
+      });
+    }
+  },
 
-            return res.json({
-                status: true,
-                message: "Cập nhật chiến dịch thành công",
-                data: campaign,
-            });
+  // ============================================================================
+  // 3. CREATE (ĐÃ THÊM VALIDATE NGÀY)
+  // ============================================================================
+  async createCampaign(req, res) {
+    try {
+      const {
+        title,
+        content,
+        start_date,
+        end_date,
+        is_emergency,
+        locate_type,
+        location,
+        donation_site_id,
+      } = req.body;
 
-        } catch (err) {
-            console.error("ERR updateCampaign:", err);
-            return res.status(500).json({
-                status: false,
-                message: "Lỗi server khi cập nhật chiến dịch",
-            });
-        }
-    },
-    async closeCampaign(req, res) {
-        try {
-            const id = req.params.id;
+      // 🔥 VALIDATE NGÀY – BACKEND
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-            const campaign = await Campaign.findByPk(id);
-            if (!campaign) {
-                return res.json({
-                    status: false,
-                    message: "Không tìm thấy chiến dịch",
-                });
-            }
+      const start = new Date(start_date);
+      const end = new Date(end_date);
 
-            await campaign.update({
-                end_date: new Date(),
-            });
+      if (start < today) {
+        return res.json({
+          status: false,
+          message: "Ngày bắt đầu không được nhỏ hơn hôm nay!",
+        });
+      }
 
-            return res.json({
-                status: true,
-                message: "Đã đóng chiến dịch thành công",
-            });
+      if (end < start) {
+        return res.json({
+          status: false,
+          message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu!",
+        });
+      }
 
-        } catch (err) {
-            console.error("ERR closeCampaign:", err);
-            return res.status(500).json({
-                status: false,
-                message: "Lỗi server khi đóng chiến dịch",
-            });
-        }
-    },
+      if (end < today) {
+        return res.json({
+          status: false,
+          message: "Ngày kết thúc không được nhỏ hơn hôm nay!",
+        });
+      }
+
+      const payload = {
+        title,
+        content,
+        start_date,
+        end_date,
+        is_emergency,
+        locate_type,
+        created_by: req.user.userId,
+        location: null,
+        donation_site_id: null,
+      };
+
+      if (locate_type === "custom") payload.location = location;
+      if (locate_type === "donation_site") payload.donation_site_id = donation_site_id;
+
+      const newCamp = await Campaign.create(payload);
+
+      return res.json({
+        status: true,
+        message: "Tạo chiến dịch thành công!",
+        data: newCamp,
+      });
+
+    } catch (err) {
+      console.error("createCampaign error:", err);
+      return res.status(500).json({
+        status: false,
+        message: err.message,
+      });
+    }
+  },
+
+  // ============================================================================
+  // 4. UPDATE
+  // ============================================================================
+  async updateCampaign(req, res) {
+    try {
+      const id = req.params.id;
+      const data = req.body;
+
+      const campaign = await Campaign.findByPk(id);
+
+      if (!campaign) {
+        return res.json({
+          status: false,
+          message: "Không tìm thấy chiến dịch",
+        });
+      }
+
+      const now = new Date();
+      const startDate = new Date(campaign.start_date);
+
+      // ĐÃ BẮT ĐẦU → chỉ được sửa mô tả
+      if (startDate <= now) {
+        await campaign.update({ content: data.content });
+        await campaign.reload();
+
+        return res.json({
+          status: true,
+          canEdit: false,
+          message: "Cập nhật mô tả thành công (chiến dịch đã bắt đầu)",
+          data: campaign,
+        });
+      }
+
+      const payload = {
+        title: data.title,
+        content: data.content,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        is_emergency: data.is_emergency,
+        locate_type: data.locate_type,
+        location: null,
+        donation_site_id: null,
+      };
+
+      if (data.locate_type === "custom") payload.location = data.location;
+      if (data.locate_type === "donation_site") payload.donation_site_id = data.donation_site_id;
+
+      await campaign.update(payload);
+      await campaign.reload();
+
+      return res.json({
+        status: true,
+        canEdit: true,
+        message: "Cập nhật chiến dịch thành công",
+        data: campaign,
+      });
+
+    } catch (err) {
+      console.error("updateCampaign error:", err);
+      return res.status(500).json({
+        status: false,
+        message: err.message,
+      });
+    }
+  },
+
+  // ============================================================================
+  // 5. CLOSE CAMPAIGN
+  // ============================================================================
+  async closeCampaign(req, res) {
+    try {
+      const id = req.params.id;
+
+      const campaign = await Campaign.findByPk(id);
+      if (!campaign) {
+        return res.status(404).json({
+          status: false,
+          message: "Không tìm thấy chiến dịch",
+        });
+      }
+
+      if (campaign.status === "ended") {
+        return res.json({
+          status: true,
+          message: "Chiến dịch đã được đóng trước đó.",
+          data: campaign,
+        });
+      }
+
+      await campaign.update({ status: "ended" });
+      await campaign.reload();
+
+      return res.json({
+        status: true,
+        message: "Đã đóng chiến dịch thành công!",
+        data: campaign,
+      });
+
+    } catch (err) {
+      console.error("closeCampaign error:", err);
+      return res.status(500).json({
+        status: false,
+        message: err.message,
+      });
+    }
+  },
+
+  // ============================================================================
+  // 6. GET APPOINTMENTS
+  // ============================================================================
+  async getCampaignAppointments(req, res) {
+    try {
+      const id = req.params.id;
+
+      const appointments = await Appointment.findAll({
+        where: { campaign_id: id },
+        order: [["scheduled_at", "ASC"]],
+      });
+
+      if (!appointments.length) {
+        return res.json({ status: true, data: [] });
+      }
+
+      const donorIds = [...new Set(appointments.map((a) => a.donor_id))];
+
+      const donorList = await User.findAll({
+        where: { id: donorIds },
+        attributes: ["id", "full_name", "phone", "blood_group"],
+      });
+
+      const mapUser = {};
+      donorList.forEach((u) => (mapUser[u.id] = u));
+
+      const list = appointments.map((a) => {
+        const dt = a.scheduled_at ? new Date(a.scheduled_at) : null;
+
+        return {
+          id: a.id,
+          donorName: mapUser[a.donor_id]?.full_name || "Không rõ",
+          donorPhone: mapUser[a.donor_id]?.phone || "Không rõ",
+          bloodType: mapUser[a.donor_id]?.blood_group || "Không rõ",
+          date: dt ? dt.toISOString().slice(0, 10) : "",
+          time: dt ? dt.toISOString().slice(11, 16) : "",
+          status: a.status,
+          statusClass:
+            a.status === "APPROVED"
+              ? "bg-success text-white"
+              : a.status === "PENDING"
+              ? "bg-warning text-dark"
+              : "bg-danger text-white",
+        };
+      });
+
+      return res.json({ status: true, data: list });
+
+    } catch (err) {
+      console.error("getCampaignAppointments error:", err);
+      return res.status(500).json({
+        status: false,
+        message: err.message,
+      });
+    }
+  },
 };

@@ -41,7 +41,7 @@ const InventoryAdminController = require("../controllers/admin/InventoryAdminCon
 const AppointmentAdminController = require("../controllers/admin/AppointmentAdminController");
 const DonorManagementController = require("../controllers/doctor/DonorManagementController");
 const DonorDetailController = require("../controllers/doctor/DonorDetailController");
-const CampaignController = require("../controllers/doctor/CampaignsController")
+const CampaignController = require("../controllers/doctor/CampaignsController");
 
 router.post(
   "/register",
@@ -110,6 +110,9 @@ doctorRouter.get("/campaigns/:id", CampaignController.getCampaignDetail);
 doctorRouter.post("/campaigns", CampaignController.createCampaign);
 doctorRouter.put("/campaigns/:id", CampaignController.updateCampaign);
 doctorRouter.patch("/campaigns/:id/close", CampaignController.closeCampaign);
+doctorRouter.get("/campaigns/:id/appointments", CampaignController.getCampaignAppointments);
+
+
 doctorRouter.get("/donation-sites", DonationSitesController.getAll);
 
 
