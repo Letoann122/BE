@@ -8,57 +8,49 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "created_by",
         as: "creator",
       });
+
+      Campaign.belongsTo(models.DonationSite, {
+        foreignKey: "donation_site_id",
+        as: "donation_site",
+      });
     }
   }
 
   Campaign.init(
     {
-      id: {
+      id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+       hospital_id: {
         type: DataTypes.BIGINT,
-        autoIncrement: true,
-        primaryKey: true,
+        allowNull: true,
       },
-      title: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
-      },
-      content: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      start_date: {
-        type: DataTypes.DATEONLY,
-        allowNull: false,
-      },
-      end_date: {
-        type: DataTypes.DATEONLY,
-        allowNull: false,
-      },
-      is_emergency: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      created_by: {
-        type: DataTypes.BIGINT,
-        allowNull: false,
-        references: {
-          model: "users",
-          key: "id",
-        },
-      },
+      title: DataTypes.STRING(255),
+      content: DataTypes.TEXT,
+      start_date: DataTypes.DATEONLY,
+      end_date: DataTypes.DATEONLY,
+      is_emergency: DataTypes.TINYINT,
+      created_by: DataTypes.BIGINT,
+
       locate_type: {
-          type: DataTypes.ENUM("custom", "donation_site"),
-          allowNull: false,
-          defaultValue: "custom",
+        type: DataTypes.ENUM("custom", "donation_site"),
+        defaultValue: "custom",
+      },
+
+       status: {
+        type: DataTypes.ENUM("upcoming", "running", "ended"),
+        defaultValue: "upcoming",
       },
       donation_site_id: {
-          type: DataTypes.BIGINT,
-          allowNull: true,
+        type: DataTypes.BIGINT,
+        allowNull: true,
       },
+
+      location: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
+
       created_at: {
         type: DataTypes.DATE,
-        allowNull: false,
         defaultValue: DataTypes.NOW,
       },
     },
@@ -66,7 +58,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: "Campaign",
       tableName: "campaigns",
-
       timestamps: true,
       createdAt: "created_at",
       updatedAt: false,
