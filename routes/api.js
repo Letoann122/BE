@@ -43,12 +43,7 @@ const DonorManagementController = require("../controllers/doctor/DonorManagement
 const DonorDetailController = require("../controllers/doctor/DonorDetailController");
 const CampaignController = require("../controllers/doctor/CampaignsController");
 
-router.post(
-  "/register",
-  CreateTaiKhoanRequest,
-  validateRequest,
-  RegisterController.register
-);
+router.post("/register",CreateTaiKhoanRequest,validateRequest,RegisterController.register);
 router.post("/login", LoginRequest, validateRequest, LoginController.login);
 router.get("/logout", LogoutController.logout);
 
@@ -68,16 +63,9 @@ donorRouter.put("/profile", ProfileController.updateProfile);
 donorRouter.put("/change-password", ChangePasswordController.changePassword);
 donorRouter.get("/me", LoadProfileController.me);
 donorRouter.get("/donation-sites", DonationSitesController.getAll);
-donorRouter.post(
-  "/donation-appointments",
-  BookingDonationRequest,
-  AppointmentController.create
-);
+donorRouter.post("/donation-appointments", BookingDonationRequest, AppointmentController.create);
 donorRouter.get("/donation-appointments", AppointmentController.myList);
-donorRouter.post(
-  "/donation-appointments/:id/cancel",
-  AppointmentController.cancel
-);
+donorRouter.post("/donation-appointments/:id/cancel",AppointmentController.cancel);
 
 router.use("/donor", verifyToken("donor"), donorRouter);
 
@@ -97,8 +85,19 @@ doctorRouter.post("/donation-appointments/reject",DonationAppointmentController.
 doctorRouter.get("/blood-inventory", BloodInventoryController.getAll);
 doctorRouter.post("/blood-inventory", BloodInventoryController.create);
 doctorRouter.post("/blood-inventory/filter", BloodInventoryController.filter);
+doctorRouter.post("/blood-inventory/export", BloodInventoryController.export);
+
+// ✅ logs đặt trước :id
+doctorRouter.get("/blood-inventory/logs", BloodInventoryController.logsAll);
+doctorRouter.get("/blood-inventory/logs/:batch_id", BloodInventoryController.logsByBatch);
+
+// :id để cuối cùng trong nhóm GET
+doctorRouter.get("/blood-inventory/:id", BloodInventoryController.getOne);
+
 doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
 doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
+
+
 doctorRouter.get("/donation-appointments/approved",DonationController.index);
 doctorRouter.post("/donations/complete",DonationController.completeDonation);
 doctorRouter.get("/donors", DonorManagementController.list);
