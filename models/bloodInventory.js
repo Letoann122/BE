@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       hospital_id: {
         type: DataTypes.BIGINT,
-        allowNull: false,
+        allowNull: null,
       },
       blood_type_id: {
         type: DataTypes.BIGINT,
