@@ -1,4 +1,3 @@
-// models/bloodInventory.js
 module.exports = (sequelize, DataTypes) => {
   const BloodInventory = sequelize.define(
     "BloodInventory",
