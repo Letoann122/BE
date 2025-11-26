@@ -18,7 +18,7 @@ const BookingDonationRequest = require("../requests/client/BookingDonationReques
 
 // ===== COMMON =====
 const NewsController = require("../controllers/NewsController");
-
+const CampaignController = require("../controllers/donor/CampaignController");
 // ===== DONOR =====
 const LoadProfileController = require("../controllers/donor/LoadProfileController");
 const DonationSitesController = require("../controllers/donor/DonationSitesController");
@@ -37,7 +37,7 @@ const DonationAppointmentController = require("../controllers/doctor/DonationApp
 const DonationController = require("../controllers/doctor/DonationController");
 const DonorManagementController = require("../controllers/doctor/DonorManagementController");
 const DonorDetailController = require("../controllers/doctor/DonorDetailController");
-const CampaignController = require("../controllers/doctor/CampaignsController");
+const CampaignsController = require("../controllers/doctor/CampaignsController");
 
 // ===== ADMIN =====
 const AdminController = require("../controllers/admin/AdminController");
@@ -48,8 +48,9 @@ const InventoryAdminController = require("../controllers/admin/InventoryAdminCon
 const AppointmentAdminController = require("../controllers/admin/AppointmentAdminController");
 
 // ✅ campaigns admin: tách đúng 2 controller
-const CampaignsController = require("../controllers/admin/CampaignsController"); // management (list/detail/update/close/sites)
+const CampaignsManagementController = require("../controllers/admin/CampaignsManagementController"); // management (list/detail/update/close/sites)
 const CampaignApprovalController = require("../controllers/admin/CampaignApprovalController"); // pending/approve/reject
+const DonationHistoryController = require("../controllers/donor/DonationHistoryController");
 
 // ==================== AUTH ====================
 router.post(
@@ -68,6 +69,8 @@ router.post("/reset-password", ResetPasswordController.resetPassword);
 // ==================== PUBLIC ====================
 router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
+router.get("/public/campaigns", CampaignController.publicCampaigns);
+router.get("/public/campaigns/:id", CampaignController.publicCampaignDetail);
 
 // ==================== DONOR ROUTES ====================
 const donorRouter = express.Router();
@@ -80,14 +83,11 @@ donorRouter.get("/me", LoadProfileController.me);
 
 donorRouter.get("/donation-sites", DonationSitesController.getAll);
 
-donorRouter.post(
-  "/donation-appointments",
-  BookingDonationRequest,
-  AppointmentController.create
-);
+donorRouter.post("/donation-appointments", BookingDonationRequest, AppointmentController.create);
 donorRouter.get("/donation-appointments", AppointmentController.myList);
 donorRouter.post("/donation-appointments/:id/cancel", AppointmentController.cancel);
-
+donorRouter.post("/register-campaigns", CampaignController.donorCreateAppointment);
+donorRouter.get("/donation-history", DonationHistoryController.index);
 router.use("/donor", verifyToken("donor"), donorRouter);
 
 // ==================== DOCTOR ROUTES ====================
@@ -127,12 +127,12 @@ doctorRouter.post("/donors/create", DonorManagementController.create);
 doctorRouter.get("/donors/:id", DonorDetailController.detail);
 
 // campaigns (doctor/hospital side)
-doctorRouter.get("/campaigns", CampaignController.getAllCampaigns);
-doctorRouter.get("/campaigns/:id", CampaignController.getCampaignDetail);
-doctorRouter.post("/campaigns", CampaignController.createCampaign);
-doctorRouter.put("/campaigns/:id", CampaignController.updateCampaign);
-doctorRouter.patch("/campaigns/:id/close", CampaignController.closeCampaign);
-doctorRouter.get("/campaigns/:id/appointments", CampaignController.getCampaignAppointments);
+doctorRouter.get("/campaigns", CampaignsController.getAllCampaigns);
+doctorRouter.get("/campaigns/:id", CampaignsController.getCampaignDetail);
+doctorRouter.post("/campaigns", CampaignsController.createCampaign);
+doctorRouter.put("/campaigns/:id", CampaignsController.updateCampaign);
+doctorRouter.patch("/campaigns/:id/close", CampaignsController.closeCampaign);
+doctorRouter.get("/campaigns/:id/appointments", CampaignsController.getCampaignAppointments);
 
 doctorRouter.get("/donation-sites", DonationSitesController.getAll);
 
@@ -186,7 +186,7 @@ adminRouter.put("/campaigns/:id", CampaignsController.updateCampaign);
 adminRouter.patch("/campaigns/:id/close", CampaignsController.closeCampaign);
 
 // 7) Donation sites (for edit modal)
-adminRouter.get("/donation-sites", CampaignsController.getDonationSites);
+adminRouter.get("/donation-sites", CampaignsManagementController.getDonationSites);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
