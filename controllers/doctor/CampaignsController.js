@@ -1,13 +1,7 @@
-// controllers/doctor/CampaignsController.js
 "use strict";
 
-const {
-  Campaign,
-  User,
-  DonationSite,
-  Appointment,
-} = require("../../models");
-const { Op, fn, col } = require("sequelize"); // thêm fn, col để dùng COUNT
+const { Campaign, User, DonationSite, Appointment } = require("../../models");
+const { Op, fn, col } = require("sequelize");
 
 // Helper
 const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
@@ -19,23 +13,22 @@ module.exports = {
   // ============================================================================
   async getAllCampaigns(req, res) {
     try {
-      let { type, time, status, start_from, start_to } = req.query;
+      let { type, time, status, start_from, start_to, approval_status } = req.query;
       const where = {};
 
       // FILTER TYPE
       if (type === "0") where.is_emergency = 0;
       if (type === "1") where.is_emergency = 1;
 
-      // FILTER STATUS
-      if (status) {
-        where.status = status;
-      }
+      // FILTER STATUS (upcoming/running/ended) - giữ nguyên
+      if (status) where.status = status;
 
-      // FILTER TỪ NGÀY -> ĐẾN NGÀY (custom)
+      // ✅ FILTER APPROVAL (pending/approved/rejected)
+      if (approval_status) where.approval_status = approval_status;
+
+      // FILTER CUSTOM RANGE
       if (start_from && start_to) {
-        where.start_date = {
-          [Op.between]: [start_from, start_to],
-        };
+        where.start_date = { [Op.between]: [start_from, start_to] };
       }
 
       // FILTER TIME (this_month, last_month, this_year)
@@ -46,10 +39,7 @@ module.exports = {
       if (time === "this_month") {
         const last = getLastDay(year, month);
         where.start_date = {
-          [Op.between]: [
-            `${year}-${pad(month)}-01`,
-            `${year}-${pad(month)}-${pad(last)}`,
-          ],
+          [Op.between]: [`${year}-${pad(month)}-01`, `${year}-${pad(month)}-${pad(last)}`],
         };
       }
 
@@ -57,72 +47,45 @@ module.exports = {
         const m = month - 1 === 0 ? 12 : month - 1;
         const y = m === 12 ? year - 1 : year;
         const last = getLastDay(y, m);
-
         where.start_date = {
-          [Op.between]: [
-            `${y}-${pad(m)}-01`,
-            `${y}-${pad(m)}-${pad(last)}`,
-          ],
+          [Op.between]: [`${y}-${pad(m)}-01`, `${y}-${pad(m)}-${pad(last)}`],
         };
       }
 
       if (time === "this_year") {
-        where.start_date = {
-          [Op.between]: [`${year}-01-01`, `${year}-12-31`],
-        };
+        where.start_date = { [Op.between]: [`${year}-01-01`, `${year}-12-31`] };
       }
 
-      // LẤY DANH SÁCH CHIẾN DỊCH
       const campaigns = await Campaign.findAll({
         where,
         include: [
           { model: User, as: "creator", attributes: ["full_name"] },
+          { model: User, as: "reviewer", attributes: ["full_name"] }, // ✅ ai duyệt/từ chối
           { model: DonationSite, as: "donation_site" },
         ],
         order: [["created_at", "DESC"]],
       });
 
-      // Nếu không có campaign nào thì trả luôn
-      if (!campaigns.length) {
-        return res.json({ status: true, data: [] });
-      }
+      if (!campaigns.length) return res.json({ status: true, data: [] });
 
-      // LẤY LIST ID CHIẾN DỊCH
       const campaignIds = campaigns.map((c) => c.id);
 
-      // ĐẾM SỐ LƯỢNG APPOINTMENT / CHIẾN DỊCH
       const counts = await Appointment.findAll({
-        attributes: [
-          "campaign_id",
-          [fn("COUNT", col("id")), "registration_count"],
-        ],
-        where: {
-          campaign_id: {
-            [Op.in]: campaignIds,
-          },
-        },
+        attributes: ["campaign_id", [fn("COUNT", col("id")), "registration_count"]],
+        where: { campaign_id: { [Op.in]: campaignIds } },
         group: ["campaign_id"],
         raw: true,
       });
 
       const countMap = {};
-      counts.forEach((row) => {
-        countMap[row.campaign_id] = parseInt(row.registration_count, 10) || 0;
-      });
+      counts.forEach((row) => (countMap[row.campaign_id] = parseInt(row.registration_count, 10) || 0));
 
-      // GÁN registration_count VÀO TỪNG CAMPAIGN
-      campaigns.forEach((c) => {
-        const reg = countMap[c.id] || 0;
-        c.setDataValue("registration_count", reg);
-      });
+      campaigns.forEach((c) => c.setDataValue("registration_count", countMap[c.id] || 0));
 
       return res.json({ status: true, data: campaigns });
     } catch (err) {
       console.error("getAllCampaigns error:", err);
-      return res.status(500).json({
-        status: false,
-        errors: { server: [err.message] },
-      });
+      return res.status(500).json({ status: false, errors: { server: [err.message] } });
     }
   },
 
@@ -137,71 +100,35 @@ module.exports = {
         where: { id },
         include: [
           { model: User, as: "creator", attributes: ["full_name"] },
+          { model: User, as: "reviewer", attributes: ["full_name"] },
           { model: DonationSite, as: "donation_site" },
         ],
       });
 
-      if (!campaign) {
-        return res.json({
-          status: false,
-          message: "Không tìm thấy chiến dịch",
-        });
-      }
+      if (!campaign) return res.json({ status: false, message: "Không tìm thấy chiến dịch" });
 
       return res.json({ status: true, data: campaign });
-
     } catch (err) {
       console.error("getCampaignDetail error:", err);
-      return res.status(500).json({
-        status: false,
-        message: err.message,
-      });
+      return res.status(500).json({ status: false, message: err.message });
     }
   },
 
   // ============================================================================
-  // 3. CREATE (ĐÃ THÊM VALIDATE NGÀY)
+  // 3. CREATE
   // ============================================================================
   async createCampaign(req, res) {
     try {
-      const {
-        title,
-        content,
-        start_date,
-        end_date,
-        is_emergency,
-        locate_type,
-        location,
-        donation_site_id,
-      } = req.body;
+      const { title, content, start_date, end_date, is_emergency, locate_type, location, donation_site_id } = req.body;
 
-      // 🔥 VALIDATE NGÀY – BACKEND
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
+      // validate ngày
+      const today = new Date(); today.setHours(0, 0, 0, 0);
       const start = new Date(start_date);
       const end = new Date(end_date);
 
-      if (start < today) {
-        return res.json({
-          status: false,
-          message: "Ngày bắt đầu không được nhỏ hơn hôm nay!",
-        });
-      }
-
-      if (end < start) {
-        return res.json({
-          status: false,
-          message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu!",
-        });
-      }
-
-      if (end < today) {
-        return res.json({
-          status: false,
-          message: "Ngày kết thúc không được nhỏ hơn hôm nay!",
-        });
-      }
+      if (start < today) return res.json({ status: false, message: "Ngày bắt đầu không được nhỏ hơn hôm nay!" });
+      if (end < start) return res.json({ status: false, message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu!" });
+      if (end < today) return res.json({ status: false, message: "Ngày kết thúc không được nhỏ hơn hôm nay!" });
 
       const payload = {
         title,
@@ -213,6 +140,12 @@ module.exports = {
         created_by: req.user.userId,
         location: null,
         donation_site_id: null,
+
+        // ✅ NEW: tạo xong là chờ admin duyệt
+        approval_status: "pending",
+        reviewed_by_admin_id: null,
+        reviewed_at: null,
+        rejected_reason: null,
       };
 
       if (locate_type === "custom") payload.location = location;
@@ -220,18 +153,10 @@ module.exports = {
 
       const newCamp = await Campaign.create(payload);
 
-      return res.json({
-        status: true,
-        message: "Tạo chiến dịch thành công!",
-        data: newCamp,
-      });
-
+      return res.json({ status: true, message: "Tạo chiến dịch thành công! (Chờ Admin duyệt)", data: newCamp });
     } catch (err) {
       console.error("createCampaign error:", err);
-      return res.status(500).json({
-        status: false,
-        message: err.message,
-      });
+      return res.status(500).json({ status: false, message: err.message });
     }
   },
 
@@ -244,22 +169,15 @@ module.exports = {
       const data = req.body;
 
       const campaign = await Campaign.findByPk(id);
-
-      if (!campaign) {
-        return res.json({
-          status: false,
-          message: "Không tìm thấy chiến dịch",
-        });
-      }
+      if (!campaign) return res.json({ status: false, message: "Không tìm thấy chiến dịch" });
 
       const now = new Date();
       const startDate = new Date(campaign.start_date);
 
-      // ĐÃ BẮT ĐẦU → chỉ được sửa mô tả
+      // đã bắt đầu -> chỉ sửa content
       if (startDate <= now) {
         await campaign.update({ content: data.content });
         await campaign.reload();
-
         return res.json({
           status: true,
           canEdit: false,
@@ -268,6 +186,7 @@ module.exports = {
         });
       }
 
+      // payload update
       const payload = {
         title: data.title,
         content: data.content,
@@ -282,22 +201,30 @@ module.exports = {
       if (data.locate_type === "custom") payload.location = data.location;
       if (data.locate_type === "donation_site") payload.donation_site_id = data.donation_site_id;
 
+      // ✅ nếu đã bị reject hoặc đã approved mà sửa field quan trọng -> reset về pending để duyệt lại
+      const importantChanged =
+        (data.title ?? "") !== (campaign.title ?? "") ||
+        (data.start_date ?? "") !== (campaign.start_date ?? "") ||
+        (data.end_date ?? "") !== (campaign.end_date ?? "") ||
+        String(data.is_emergency ?? "") !== String(campaign.is_emergency ?? "") ||
+        (data.locate_type ?? "") !== (campaign.locate_type ?? "") ||
+        String(data.donation_site_id ?? "") !== String(campaign.donation_site_id ?? "") ||
+        (data.location ?? "") !== (campaign.location ?? "");
+
+      if (campaign.approval_status === "rejected" || (campaign.approval_status === "approved" && importantChanged)) {
+        payload.approval_status = "pending";
+        payload.reviewed_by_admin_id = null;
+        payload.reviewed_at = null;
+        payload.rejected_reason = null;
+      }
+
       await campaign.update(payload);
       await campaign.reload();
 
-      return res.json({
-        status: true,
-        canEdit: true,
-        message: "Cập nhật chiến dịch thành công",
-        data: campaign,
-      });
-
+      return res.json({ status: true, canEdit: true, message: "Cập nhật chiến dịch thành công", data: campaign });
     } catch (err) {
       console.error("updateCampaign error:", err);
-      return res.status(500).json({
-        status: false,
-        message: err.message,
-      });
+      return res.status(500).json({ status: false, message: err.message });
     }
   },
 
@@ -309,36 +236,19 @@ module.exports = {
       const id = req.params.id;
 
       const campaign = await Campaign.findByPk(id);
-      if (!campaign) {
-        return res.status(404).json({
-          status: false,
-          message: "Không tìm thấy chiến dịch",
-        });
-      }
+      if (!campaign) return res.status(404).json({ status: false, message: "Không tìm thấy chiến dịch" });
 
       if (campaign.status === "ended") {
-        return res.json({
-          status: true,
-          message: "Chiến dịch đã được đóng trước đó.",
-          data: campaign,
-        });
+        return res.json({ status: true, message: "Chiến dịch đã được đóng trước đó.", data: campaign });
       }
 
       await campaign.update({ status: "ended" });
       await campaign.reload();
 
-      return res.json({
-        status: true,
-        message: "Đã đóng chiến dịch thành công!",
-        data: campaign,
-      });
-
+      return res.json({ status: true, message: "Đã đóng chiến dịch thành công!", data: campaign });
     } catch (err) {
       console.error("closeCampaign error:", err);
-      return res.status(500).json({
-        status: false,
-        message: err.message,
-      });
+      return res.status(500).json({ status: false, message: err.message });
     }
   },
 
@@ -354,9 +264,7 @@ module.exports = {
         order: [["scheduled_at", "ASC"]],
       });
 
-      if (!appointments.length) {
-        return res.json({ status: true, data: [] });
-      }
+      if (!appointments.length) return res.json({ status: true, data: [] });
 
       const donorIds = [...new Set(appointments.map((a) => a.donor_id))];
 
@@ -370,7 +278,6 @@ module.exports = {
 
       const list = appointments.map((a) => {
         const dt = a.scheduled_at ? new Date(a.scheduled_at) : null;
-
         return {
           id: a.id,
           donorName: mapUser[a.donor_id]?.full_name || "Không rõ",
@@ -389,13 +296,9 @@ module.exports = {
       });
 
       return res.json({ status: true, data: list });
-
     } catch (err) {
       console.error("getCampaignAppointments error:", err);
-      return res.status(500).json({
-        status: false,
-        message: err.message,
-      });
+      return res.status(500).json({ status: false, message: err.message });
     }
   },
 };
