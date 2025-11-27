@@ -5,6 +5,10 @@ const { sequelize } = require("../../models");
 /**
  * GET /donor/donation-history?year=&month=&q=&page=&limit=
  * - Trả: stats + data + meta (pagination)
+ * - Support campaign:
+ *   + campaign locate_type = 'donation_site' => lấy ds_camp (hoặc fallback ds_appt)
+ *   + campaign locate_type != 'donation_site' => lấy c.location
+ * - Không phụ thuộc donations.hospital_id (có thể NULL)
  */
 module.exports = {
   async index(req, res) {
@@ -12,13 +16,8 @@ module.exports = {
       const userId = req.user?.userId || req.user?.id;
       const role = req.user?.role;
 
-      if (!userId) {
-        return res.status(401).json({ status: false, message: "Unauthorized" });
-      }
-      // Nếu bạn không check role ở middleware thì giữ, còn không thì bỏ cũng được
-      if (role && role !== "donor") {
-        return res.status(403).json({ status: false, message: "Forbidden" });
-      }
+      if (!userId) return res.status(401).json({ status: false, message: "Unauthorized" });
+      if (role && role !== "donor") return res.status(403).json({ status: false, message: "Forbidden" });
 
       const year = req.query.year ? parseInt(req.query.year, 10) : null;
       const month = req.query.month ? parseInt(req.query.month, 10) : null;
@@ -33,7 +32,26 @@ module.exports = {
       const safeMonth = Number.isFinite(month) && month >= 1 && month <= 12 ? month : null;
       const like = q ? `%${q}%` : null;
 
-      // ---- STATS (tính tổng + lần gần nhất) ----
+      // location_display:
+      // - campaign custom => c.location
+      // - else => ds_camp hoặc ds_appt
+      const locationExpr = `
+        CASE
+          WHEN c.id IS NOT NULL AND (c.locate_type IS NULL OR c.locate_type <> 'donation_site')
+            THEN COALESCE(c.location, '')
+          ELSE CONCAT_WS(' - ',
+                COALESCE(ds_camp.name, ds_appt.name, ''),
+                COALESCE(ds_camp.address, ds_appt.address, '')
+          )
+        END
+      `;
+
+      // hospital_name: ưu tiên hospital theo donation_site (campaign/app) hơn là donations.hospital_id (vì có thể null)
+      const hospitalNameExpr = `
+        COALESCE(h_site.name, h_d.name, '')
+      `;
+
+      // ---- STATS ----
       const statsSql = `
         SELECT
           COUNT(*) AS total_count,
@@ -41,16 +59,22 @@ module.exports = {
           MAX(d.collected_at) AS last_donation_at
         FROM donations d
         JOIN appointments a ON a.id = d.appointment_id
-        LEFT JOIN donation_sites ds ON ds.id = a.donation_site_id
-        LEFT JOIN hospitals h ON h.id = d.hospital_id
+        LEFT JOIN campaigns c ON c.id = a.campaign_id
+
+        LEFT JOIN donation_sites ds_appt ON ds_appt.id = a.donation_site_id
+        LEFT JOIN donation_sites ds_camp ON ds_camp.id = c.donation_site_id
+
+        LEFT JOIN hospitals h_d ON h_d.id = d.hospital_id
+        LEFT JOIN hospitals h_site ON h_site.id = COALESCE(ds_camp.hospital_id, ds_appt.hospital_id)
+
         WHERE d.donor_user_id = :userId
           AND (:year IS NULL OR YEAR(d.collected_at) = :year)
           AND (:month IS NULL OR MONTH(d.collected_at) = :month)
           AND (
             :q IS NULL OR
-            ds.name LIKE :like OR
-            ds.address LIKE :like OR
-            h.name LIKE :like
+            COALESCE(c.title,'') LIKE :like OR
+            (${locationExpr}) LIKE :like OR
+            (${hospitalNameExpr}) LIKE :like
           )
       `;
 
@@ -62,8 +86,7 @@ module.exports = {
       const totalRecords = parseInt(statsRow.total_count || 0, 10);
       const totalPages = Math.max(Math.ceil(totalRecords / limit), 1);
 
-      // ---- LIST (phân trang) ----
-      // Lưu ý: để tránh lỗi bind LIMIT/OFFSET tùy driver, mình nhúng trực tiếp sau khi đã sanitize số
+      // ---- LIST ----
       const listSql = `
         SELECT
           d.id,
@@ -72,22 +95,39 @@ module.exports = {
           d.notes,
           d.screened_ok,
           CONCAT(bt.abo, bt.rh) AS blood_group,
-          h.name AS hospital_name,
-          ds.name AS donation_site_name,
-          ds.address AS donation_site_address
+
+          a.appointment_code,
+          a.campaign_id,
+          (CASE WHEN c.id IS NULL THEN 0 ELSE 1 END) AS is_campaign,
+          c.title AS campaign_title,
+          c.locate_type AS campaign_locate_type,
+
+          (${locationExpr}) AS location_display,
+          (${hospitalNameExpr}) AS hospital_name,
+
+          COALESCE(ds_camp.name, ds_appt.name) AS donation_site_name,
+          COALESCE(ds_camp.address, ds_appt.address) AS donation_site_address
+
         FROM donations d
         JOIN appointments a ON a.id = d.appointment_id
-        LEFT JOIN donation_sites ds ON ds.id = a.donation_site_id
-        LEFT JOIN hospitals h ON h.id = d.hospital_id
+        LEFT JOIN campaigns c ON c.id = a.campaign_id
+
+        LEFT JOIN donation_sites ds_appt ON ds_appt.id = a.donation_site_id
+        LEFT JOIN donation_sites ds_camp ON ds_camp.id = c.donation_site_id
+
+        LEFT JOIN hospitals h_d ON h_d.id = d.hospital_id
+        LEFT JOIN hospitals h_site ON h_site.id = COALESCE(ds_camp.hospital_id, ds_appt.hospital_id)
+
         JOIN blood_types bt ON bt.id = d.blood_type_id
+
         WHERE d.donor_user_id = :userId
           AND (:year IS NULL OR YEAR(d.collected_at) = :year)
           AND (:month IS NULL OR MONTH(d.collected_at) = :month)
           AND (
             :q IS NULL OR
-            ds.name LIKE :like OR
-            ds.address LIKE :like OR
-            h.name LIKE :like
+            COALESCE(c.title,'') LIKE :like OR
+            (${locationExpr}) LIKE :like OR
+            (${hospitalNameExpr}) LIKE :like
           )
         ORDER BY d.collected_at DESC
         LIMIT ${limit} OFFSET ${offset}

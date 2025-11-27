@@ -188,6 +188,10 @@ adminRouter.patch("/campaigns/:id/close", CampaignsController.closeCampaign);
 // 7) Donation sites (for edit modal)
 adminRouter.get("/donation-sites", CampaignsManagementController.getDonationSites);
 
+adminRouter.get("/campaign-registrations", CampaignController.adminListCampaignRegistrations);
+adminRouter.patch("/campaign-registrations/:id/approve", CampaignController.adminApproveCampaignRegistration);
+adminRouter.patch("/campaign-registrations/:id/reject", CampaignController.adminRejectCampaignRegistration);
+
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
 
