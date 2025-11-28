@@ -113,7 +113,7 @@ doctorRouter.post("/blood-inventory/export", BloodInventoryController.export);
 // ✅ logs đặt trước :id
 doctorRouter.get("/blood-inventory/logs", BloodInventoryController.logsAll);
 doctorRouter.get("/blood-inventory/logs/:batch_id", BloodInventoryController.logsByBatch);
-
+//test
 // :id để cuối cùng trong nhóm GET
 doctorRouter.get("/blood-inventory/:id", BloodInventoryController.getOne);
 doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);
