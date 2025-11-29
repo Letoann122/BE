@@ -38,6 +38,7 @@ const DonationController = require("../controllers/doctor/DonationController");
 const DonorManagementController = require("../controllers/doctor/DonorManagementController");
 const DonorDetailController = require("../controllers/doctor/DonorDetailController");
 const CampaignsController = require("../controllers/doctor/CampaignsController");
+const sendNotificationController = require("../controllers/doctor/SendNotificationController");
 
 // ===== ADMIN =====
 const AdminController = require("../controllers/admin/AdminController");
@@ -46,11 +47,11 @@ const DashboardController = require("../controllers/admin/DashboardController");
 const AcpDoctorController = require("../controllers/admin/AcpDoctorController");
 const InventoryAdminController = require("../controllers/admin/InventoryAdminController");
 const AppointmentAdminController = require("../controllers/admin/AppointmentAdminController");
-
-// ✅ campaigns admin: tách đúng 2 controller
-const CampaignsManagementController = require("../controllers/admin/CampaignsManagementController"); // management (list/detail/update/close/sites)
-const CampaignApprovalController = require("../controllers/admin/CampaignApprovalController"); // pending/approve/reject
+const CampaignsManagementController = require("../controllers/admin/CampaignsManagementController"); 
+const CampaignApprovalController = require("../controllers/admin/CampaignApprovalController"); 
 const DonationHistoryController = require("../controllers/donor/DonationHistoryController");
+const SendNotificationController = require("../controllers/doctor/SendNotificationController");
+const EmergencyAlertController = require("../controllers/doctor/EmergencyAlertController");
 
 // ==================== AUTH ====================
 router.post(
@@ -71,6 +72,7 @@ router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 router.get("/public/campaigns", CampaignController.publicCampaigns);
 router.get("/public/campaigns/:id", CampaignController.publicCampaignDetail);
+router.get("/public/emergency-alert", EmergencyAlertController.getEmergencyAlert);
 
 // ==================== DONOR ROUTES ====================
 const donorRouter = express.Router();
@@ -133,7 +135,9 @@ doctorRouter.post("/campaigns", CampaignsController.createCampaign);
 doctorRouter.put("/campaigns/:id", CampaignsController.updateCampaign);
 doctorRouter.patch("/campaigns/:id/close", CampaignsController.closeCampaign);
 doctorRouter.get("/campaigns/:id/appointments", CampaignsController.getCampaignAppointments);
-
+doctorRouter.get("/support/notifications", SendNotificationController.listNotifications);
+doctorRouter.post("/support/notifications", SendNotificationController.sendNotification);
+doctorRouter.post("/emergency-alert", EmergencyAlertController. createEmergencyAlert);
 doctorRouter.get("/donation-sites", DonationSitesController.getAll);
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
