@@ -1,21 +1,35 @@
+"use strict";
+
 const transporter = require("../config/mailer");
 
-async function sendMail({ to, subject, template, data }) {
-  try {
-    const info = await transporter.sendMail({
-      from: `"Smart Blood Donation" <${process.env.MAIL_USER}>`,
-      to,
-      subject,
-      template, // tên file .hbs
-      context: data, // truyền vào template như $data bên Laravel
-    });
+module.exports = {
+  async sendMail({ to, subject, template, context, data }) {
+    try {
+      // Lấy context ưu tiên: context (cronjob) hoặc data (gọi trực tiếp)
+      let ctx = context || data || {};
 
-    console.log("📩 Email sent:", info.messageId);
-    return true;
-  } catch (error) {
-    console.error("❌ Mail error:", error);
-    return false;
-  }
-}
+      // ⚠️ Nếu là string JSON -> parse về object
+      if (typeof ctx === "string") {
+        try {
+          ctx = JSON.parse(ctx);
+        } catch (e) {
+          console.warn("⚠️ Không parse được JSON context, dùng raw string:", ctx);
+          // vẫn để nguyên string, nhưng ít nhất không crash vì 'in' nữa
+        }
+      }
 
-module.exports = { sendMail };
+      await transporter.sendMail({
+        from: `"Smart Blood Donation" <${process.env.MAIL_USER}>`,
+        to,
+        subject,
+        template,
+        context: ctx,   // đảm bảo là object (hoặc string đã xử lý)
+      });
+
+      return true;
+    } catch (err) {
+      console.error("❌ Mail error:", err);
+      return false;
+    }
+  },
+};

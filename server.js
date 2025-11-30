@@ -3,7 +3,7 @@ const express = require("express");
 const app = express();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
-
+require("./cronjob/emailWorker");
 app.use(
   cors({
     origin: "http://localhost:5173",

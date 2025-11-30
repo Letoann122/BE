@@ -1,5 +1,8 @@
+"use strict";
+
 const { Appointment, DonationSite } = require("../../models");
 const { Op } = require("sequelize");
+const emailQueue = require("../../services/emailQueue");
 
 module.exports = {
   async create(req, res) {
@@ -50,6 +53,25 @@ module.exports = {
         time_slot,
         status: "REQUESTED",
       });
+
+      /* ========================================================
+         EMAIL JOB — Gửi "TRƯỚC KHI HIẾN MÁU", trước lịch 1 ngày
+      ========================================================= */
+      const sendAt = new Date(scheduledDate);
+      sendAt.setDate(sendAt.getDate() - 1);
+
+      if (req.user?.email) {
+        await emailQueue.enqueue({
+          email: req.user.email,
+          subject: "Nhắc lịch hiến máu của bạn",
+          template: "truoc_khi_hien_mau",
+          payload: {
+            ten: req.user.full_name,
+            ngay_hien: scheduledDate.toISOString().slice(0, 10),
+          },
+          scheduled_at: sendAt,
+        });
+      }
 
       return res.status(200).json({
         status: true,
