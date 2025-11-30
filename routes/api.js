@@ -182,6 +182,7 @@ adminRouter.get("/campaigns", CampaignsController.getAllCampaigns);
 
 // 4) Detail
 adminRouter.get("/campaigns/:id", CampaignsController.getCampaignDetail);
+adminRouter.get("/campaigns/:id/appointments", CampaignsController.getCampaignAppointments);
 
 // 5) Update
 adminRouter.put("/campaigns/:id", CampaignsController.updateCampaign);
