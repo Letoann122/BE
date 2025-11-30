@@ -10,9 +10,16 @@ const {
   Campaign,
 } = require("../../models");
 
-const { sendMail } = require("../../services/mailService");
+const emailQueue = require("../../services/emailQueue"); // 🔥 dùng queue
+const formatDate = (d) => {
+  if (!d) return "";
+  const date = new Date(d);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
 
-const formatDate = (d) => (d ? d.toISOString().slice(0, 10) : null);
 const formatTime = (d) => (d ? d.toTimeString().slice(0, 5) : null);
 
 const inferTimeRange = (date) => {
@@ -36,9 +43,8 @@ const slotAssoc = pickAssoc(Appointment, "AppointmentSlot", "appointment_slot_id
 const approvedDoctorAssoc = pickAssoc(Appointment, "Doctor", "approved_by_doctor_id");
 
 const slotSiteAssoc = pickAssoc(AppointmentSlot, "DonationSite", "donation_site_id");
-const hospitalAssoc = pickAssoc(DonationSite, "Hospital"); // fk có thể khác, không truyền cũng OK
+const hospitalAssoc = pickAssoc(DonationSite, "Hospital");
 
-// Campaign -> DonationSite (nếu có define assoc)
 const campaignSiteAssoc = pickAssoc(Campaign, "DonationSite", "donation_site_id");
 
 const getDonor = (appt) => (donorAssoc ? appt[donorAssoc.as] : appt.User);
@@ -66,7 +72,6 @@ const cleanNotes = (notes) => {
     .map((x) => x.trim())
     .filter(Boolean);
 
-  // remove legacy injected line: "[Địa điểm chiến dịch] ..."
   const filtered = lines.filter(
     (l) => !/^\[\s*Địa điểm chiến dịch\s*\]/i.test(l)
   );
@@ -100,25 +105,25 @@ const buildMailDataFromAppointment = (appointment, extra = {}) => {
   };
 };
 
-// ===== campaign map loader (no model association needed on Appointment) =====
+// ===== load campaign map =====
 const loadCampaignMap = async (campaignIds) => {
   const ids = [...new Set((campaignIds || []).filter(Boolean))];
   if (!ids.length) return {};
 
   const includeDonationSite = campaignSiteAssoc
     ? {
-        association: campaignSiteAssoc,
-        required: false,
-        include: hospitalAssoc
-          ? [{ association: hospitalAssoc, required: false }]
-          : [Hospital],
-      }
+      association: campaignSiteAssoc,
+      required: false,
+      include: hospitalAssoc
+        ? [{ association: hospitalAssoc, required: false }]
+        : [Hospital],
+    }
     : {
-        model: DonationSite,
-        as: "donation_site",
-        required: false,
-        include: [Hospital],
-      };
+      model: DonationSite,
+      as: "donation_site",
+      required: false,
+      include: [Hospital],
+    };
 
   const camps = await Campaign.findAll({
     where: { id: { [Op.in]: ids } },
@@ -134,7 +139,7 @@ const getCampaignSite = (camp) =>
   (campaignSiteAssoc && camp?.[campaignSiteAssoc.as]) || camp?.donation_site || null;
 
 module.exports = {
-  // GET /doctor/donation-appointments?appointment_code=&date=
+  // GET /doctor/donation-appointments
   async index(req, res) {
     try {
       const { appointment_code, date } = req.query;
@@ -153,71 +158,70 @@ module.exports = {
         include: [
           donorAssoc
             ? {
-                association: donorAssoc,
-                attributes: ["full_name", "phone", "email", "blood_group"],
-              }
+              association: donorAssoc,
+              attributes: ["full_name", "phone", "email", "blood_group"],
+            }
             : { model: User, attributes: ["full_name", "phone", "email", "blood_group"] },
 
           slotAssoc
             ? {
-                association: slotAssoc,
-                required: false,
-                include: [
-                  slotSiteAssoc
-                    ? {
-                        association: slotSiteAssoc,
-                        required: false,
-                        include: hospitalAssoc
-                          ? [{ association: hospitalAssoc, required: false }]
-                          : [Hospital],
-                      }
-                    : {
-                        model: DonationSite,
-                        required: false,
-                        include: hospitalAssoc
-                          ? [{ association: hospitalAssoc, required: false }]
-                          : [Hospital],
-                      },
-                ],
-              }
+              association: slotAssoc,
+              required: false,
+              include: [
+                slotSiteAssoc
+                  ? {
+                    association: slotSiteAssoc,
+                    required: false,
+                    include: hospitalAssoc
+                      ? [{ association: hospitalAssoc, required: false }]
+                      : [Hospital],
+                  }
+                  : {
+                    model: DonationSite,
+                    required: false,
+                    include: hospitalAssoc
+                      ? [{ association: hospitalAssoc, required: false }]
+                      : [Hospital],
+                  },
+              ],
+            }
             : {
-                model: AppointmentSlot,
-                required: false,
-                include: [{ model: DonationSite, required: false, include: [Hospital] }],
-              },
+              model: AppointmentSlot,
+              required: false,
+              include: [{ model: DonationSite, required: false, include: [Hospital] }],
+            },
 
           siteAssoc
             ? {
-                association: siteAssoc,
-                required: false,
-                include: hospitalAssoc
-                  ? [{ association: hospitalAssoc, required: false }]
-                  : [Hospital],
-              }
+              association: siteAssoc,
+              required: false,
+              include: hospitalAssoc
+                ? [{ association: hospitalAssoc, required: false }]
+                : [Hospital],
+            }
             : {
-                model: DonationSite,
-                as: "donation_site",
-                required: false,
-                include: [Hospital],
-              },
+              model: DonationSite,
+              as: "donation_site",
+              required: false,
+              include: [Hospital],
+            },
 
           approvedDoctorAssoc
             ? {
-                association: approvedDoctorAssoc,
-                attributes: ["full_name"],
-                required: false,
-              }
+              association: approvedDoctorAssoc,
+              attributes: ["full_name"],
+              required: false,
+            }
             : {
-                model: Doctor,
-                as: "approved_doctor",
-                attributes: ["full_name"],
-                required: false,
-              },
+              model: Doctor,
+              as: "approved_doctor",
+              attributes: ["full_name"],
+              required: false,
+            },
         ],
         order: [["created_at", "DESC"]],
       });
 
-      // load campaigns
       const campaignMap = await loadCampaignMap(rows.map((r) => r.campaign_id));
 
       const data = rows.map((row) => {
@@ -229,13 +233,11 @@ module.exports = {
 
         const camp = row.campaign_id ? campaignMap[row.campaign_id] : null;
 
-        // ===== derive displays =====
         let is_campaign = !!camp;
         let campaign_title = camp?.title || "";
         let campaign_locate_type = camp?.locate_type || null;
         let campaign_location = camp?.location || "";
 
-        // Prefer location from campaign (if campaign appointment)
         let location_display = "";
         let hospital_display = "";
 
@@ -244,19 +246,18 @@ module.exports = {
           const campHospital = getHospitalFromSite(campSite);
 
           if (camp.locate_type === "donation_site") {
-            // fallback: appointment site if campaign-site missing
             const finalSite = campSite || apptSite;
             const finalHospital = campHospital || apptHospital;
 
-            location_display = [finalSite?.name, finalSite?.address].filter(Boolean).join(" – ");
+            location_display = [finalSite?.name, finalSite?.address]
+              .filter(Boolean)
+              .join(" – ");
             hospital_display = finalHospital?.name || "";
           } else {
-            // custom
             location_display = campaign_location || "";
-            hospital_display = ""; // custom => không có hospital fixed
+            hospital_display = "";
           }
         } else {
-          // normal appointment
           location_display = apptSite?.name || "";
           hospital_display = apptHospital?.name || "";
         }
@@ -273,7 +274,6 @@ module.exports = {
           id: row.id,
           appointment_code: row.appointment_code,
 
-          // flags for FE
           is_campaign,
           campaign_id: row.campaign_id || null,
           campaign_title,
@@ -290,7 +290,6 @@ module.exports = {
           scheduled_date: formatDate(row.scheduled_at),
           time_range: timeRange,
 
-          // keep old fields for FE, BUT also provide display versions
           donation_site_name: apptSite?.name || "",
           hospital_name: apptHospital?.name || "",
 
@@ -318,10 +317,12 @@ module.exports = {
     }
   },
 
+  // ======================= APPROVE =======================
   async approve(req, res) {
     try {
       const { id } = req.body;
-      if (!id) return res.status(400).json({ status: false, message: "Thiếu ID lịch hiến máu" });
+      if (!id)
+        return res.status(400).json({ status: false, message: "Thiếu ID lịch hiến máu" });
 
       const appointment = await Appointment.findByPk(id, {
         include: [
@@ -331,60 +332,66 @@ module.exports = {
 
           slotAssoc
             ? {
-                association: slotAssoc,
-                required: false,
-                include: [
-                  slotSiteAssoc
-                    ? {
-                        association: slotSiteAssoc,
-                        required: false,
-                        include: hospitalAssoc
-                          ? [{ association: hospitalAssoc, required: false }]
-                          : [Hospital],
-                      }
-                    : { model: DonationSite, required: false, include: [Hospital] },
-                ],
-              }
+              association: slotAssoc,
+              required: false,
+              include: [
+                slotSiteAssoc
+                  ? {
+                    association: slotSiteAssoc,
+                    required: false,
+                    include: hospitalAssoc
+                      ? [{ association: hospitalAssoc, required: false }]
+                      : [Hospital],
+                  }
+                  : { model: DonationSite, required: false, include: [Hospital] },
+              ],
+            }
             : {
-                model: AppointmentSlot,
-                required: false,
-                include: [{ model: DonationSite, required: false, include: [Hospital] }],
-              },
+              model: AppointmentSlot,
+              required: false,
+              include: [{ model: DonationSite, required: false, include: [Hospital] }],
+            },
 
           siteAssoc
             ? {
-                association: siteAssoc,
-                required: false,
-                include: hospitalAssoc
-                  ? [{ association: hospitalAssoc, required: false }]
-                  : [Hospital],
-              }
+              association: siteAssoc,
+              required: false,
+              include: hospitalAssoc
+                ? [{ association: hospitalAssoc, required: false }]
+                : [Hospital],
+            }
             : {
-                model: DonationSite,
-                as: "donation_site",
-                required: false,
-                include: [Hospital],
-              },
+              model: DonationSite,
+              as: "donation_site",
+              required: false,
+              include: [Hospital],
+            },
         ],
       });
 
-      if (!appointment) return res.status(404).json({ status: false, message: "Không tìm thấy lịch hiến máu" });
+      if (!appointment)
+        return res.status(404).json({ status: false, message: "Không tìm thấy lịch hiến máu" });
       if (appointment.status !== "REQUESTED")
         return res.status(400).json({ status: false, message: "Chỉ được duyệt lịch CHỜ DUYỆT" });
 
       const doctorUserId = req.user?.userId;
       const doctor = await Doctor.findOne({ where: { user_id: doctorUserId } });
-      if (!doctor) return res.status(403).json({ status: false, message: "Tài khoản bác sĩ không hợp lệ" });
+      if (!doctor)
+        return res.status(403).json({ status: false, message: "Tài khoản bác sĩ không hợp lệ" });
 
+      // Update
       appointment.status = "APPROVED";
       appointment.approved_by_doctor_id = doctor.id;
       appointment.approved_at = new Date();
       appointment.rejected_reason = null;
       await appointment.save();
 
-      // ===== enrich mail with campaign display (optional) =====
+      // ===== Check campaign =====
+      const isCampaign = !!appointment.campaign_id;
+
+      // ===== enrich mail campaign data =====
       let extra = {};
-      if (appointment.campaign_id) {
+      if (isCampaign) {
         const campMap = await loadCampaignMap([appointment.campaign_id]);
         const camp = campMap[appointment.campaign_id];
         if (camp) {
@@ -403,14 +410,29 @@ module.exports = {
       }
 
       const mailData = buildMailDataFromAppointment(appointment, extra);
-      if (mailData.email) {
-        sendMail({
-          to: mailData.email,
-          subject: "Lịch hiến máu của bạn đã được duyệt",
-          template: "duyet_hien_mau",
-          data: mailData,
-        });
-      }
+
+      // ================================
+      //      CHỌN TEMPLATE TỰ ĐỘNG
+      // ================================
+      await emailQueue.enqueue({
+        email: mailData.email,
+        subject: isCampaign
+          ? "Bạn đã được duyệt tham gia chiến dịch hiến máu"
+          : "Lịch hiến máu của bạn đã được duyệt",
+        template: isCampaign ? "duyet_chien_dich" : "duyet_hien_mau",
+        payload: {
+          ho_ten: mailData.ho_ten,
+          appointment_code: mailData.appointment_code,
+          ngay_hien: mailData.ngay_hien,
+          khung_gio: mailData.khung_gio,
+          dia_diem: mailData.dia_diem,
+          benh_vien: mailData.benh_vien,
+          the_tich: mailData.the_tich,
+          ghi_chu: mailData.ghi_chu,
+          campaign_title: mailData.campaign_title,
+        },
+        scheduled_at: new Date(),
+      });
 
       return res.json({ status: true, message: "Duyệt lịch hiến máu thành công" });
     } catch (error) {
@@ -419,11 +441,15 @@ module.exports = {
     }
   },
 
+
+  // ======================= REJECT =======================
+  // ======================= REJECT =======================
   async reject(req, res) {
     try {
       const { id, rejected_reason } = req.body;
 
-      if (!id) return res.status(400).json({ status: false, message: "Thiếu ID lịch hiến máu" });
+      if (!id)
+        return res.status(400).json({ status: false, message: "Thiếu ID lịch hiến máu" });
       if (!rejected_reason || !rejected_reason.trim())
         return res.status(400).json({ status: false, message: "Vui lòng nhập lý do từ chối" });
 
@@ -435,50 +461,52 @@ module.exports = {
 
           slotAssoc
             ? {
-                association: slotAssoc,
-                required: false,
-                include: [
-                  slotSiteAssoc
-                    ? {
-                        association: slotSiteAssoc,
-                        required: false,
-                        include: hospitalAssoc
-                          ? [{ association: hospitalAssoc, required: false }]
-                          : [Hospital],
-                      }
-                    : { model: DonationSite, required: false, include: [Hospital] },
-                ],
-              }
+              association: slotAssoc,
+              required: false,
+              include: [
+                slotSiteAssoc
+                  ? {
+                    association: slotSiteAssoc,
+                    required: false,
+                    include: hospitalAssoc
+                      ? [{ association: hospitalAssoc, required: false }]
+                      : [Hospital],
+                  }
+                  : { model: DonationSite, required: false, include: [Hospital] },
+              ],
+            }
             : {
-                model: AppointmentSlot,
-                required: false,
-                include: [{ model: DonationSite, required: false, include: [Hospital] }],
-              },
+              model: AppointmentSlot,
+              required: false,
+              include: [{ model: DonationSite, required: false, include: [Hospital] }],
+            },
 
           siteAssoc
             ? {
-                association: siteAssoc,
-                required: false,
-                include: hospitalAssoc
-                  ? [{ association: hospitalAssoc, required: false }]
-                  : [Hospital],
-              }
+              association: siteAssoc,
+              required: false,
+              include: hospitalAssoc
+                ? [{ association: hospitalAssoc, required: false }]
+                : [Hospital],
+            }
             : {
-                model: DonationSite,
-                as: "donation_site",
-                required: false,
-                include: [Hospital],
-              },
+              model: DonationSite,
+              as: "donation_site",
+              required: false,
+              include: [Hospital],
+            },
         ],
       });
 
-      if (!appointment) return res.status(404).json({ status: false, message: "Không tìm thấy lịch hiến máu" });
+      if (!appointment)
+        return res.status(404).json({ status: false, message: "Không tìm thấy lịch hiến máu" });
       if (appointment.status !== "REQUESTED")
         return res.status(400).json({ status: false, message: "Chỉ được từ chối lịch CHỜ DUYỆT" });
 
       const doctorUserId = req.user?.userId;
       const doctor = await Doctor.findOne({ where: { user_id: doctorUserId } });
-      if (!doctor) return res.status(403).json({ status: false, message: "Tài khoản bác sĩ không hợp lệ" });
+      if (!doctor)
+        return res.status(403).json({ status: false, message: "Tài khoản bác sĩ không hợp lệ" });
 
       appointment.status = "REJECTED";
       appointment.approved_by_doctor_id = doctor.id;
@@ -486,8 +514,10 @@ module.exports = {
       appointment.rejected_reason = rejected_reason.trim();
       await appointment.save();
 
+      const isCampaign = !!appointment.campaign_id;
+
       let extra = {};
-      if (appointment.campaign_id) {
+      if (isCampaign) {
         const campMap = await loadCampaignMap([appointment.campaign_id]);
         const camp = campMap[appointment.campaign_id];
         if (camp) {
@@ -508,19 +538,34 @@ module.exports = {
       const mailData = buildMailDataFromAppointment(appointment, extra);
       mailData.rejected_reason = rejected_reason.trim();
 
-      if (mailData.email) {
-        sendMail({
-          to: mailData.email,
-          subject: "Lịch hiến máu của bạn không được duyệt",
-          template: "tu_choi_hien_mau",
-          data: mailData,
-        });
-      }
+      await emailQueue.enqueue({
+        email: mailData.email,
+        subject: isCampaign
+          ? "Bạn không được duyệt tham gia chiến dịch hiến máu"
+          : "Lịch hiến máu của bạn không được duyệt",
+        template: isCampaign ? "tu_choi_chien_dich" : "tu_choi_hien_mau",
+        payload: {
+          ho_ten: mailData.ho_ten,
+          appointment_code: mailData.appointment_code,
+          ngay_hien: mailData.ngay_hien,
+          khung_gio: mailData.khung_gio,
+          dia_diem: mailData.dia_diem,
+          benh_vien: mailData.benh_vien,
+          rejected_reason: mailData.rejected_reason,
+          ghi_chu: mailData.ghi_chu,
+          campaign_title: mailData.campaign_title,
+        },
+        scheduled_at: new Date(),
+      });
 
-      return res.json({ status: true, message: "Từ chối lịch hiến máu thành công" });
+      return res.json({
+        status: true,
+        message: "Từ chối lịch hiến máu thành công",
+      });
     } catch (error) {
       console.error("Lỗi từ chối:", error);
       return res.status(500).json({ status: false, message: "Lỗi server!", error: error.message });
     }
   },
+
 };
