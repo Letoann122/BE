@@ -150,7 +150,6 @@ adminRouter.get("/check-token", AdminController.checkToken);
 // Quản lý user
 adminRouter.get("/users", AdminDonorController.getAllUsers);
 adminRouter.put("/users/:id", AdminDonorController.editUser);
-adminRouter.delete("/users/:id", AdminDonorController.removeUser);
 
 // Dashboard
 adminRouter.get("/dashboard", DashboardController.getDashboardStats);

@@ -1,17 +1,19 @@
-const { User } = require("../../models");
+"use strict";
+
+const { User, Donation, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 
 module.exports = {
   async getAllUsers(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 5;
+      const limit = parseInt(req.query.limit) || 15;
       const offset = (page - 1) * limit;
 
       const { search, role } = req.query;
 
       const whereCondition = {
-        role: { [Op.in]: ["donor", "doctor"] },
+        role: { [Op.ne]: "admin" },
       };
 
       if (role && ["donor", "doctor"].includes(role)) {
@@ -21,7 +23,7 @@ module.exports = {
       if (search) {
         whereCondition[Op.or] = [
           { full_name: { [Op.like]: `%${search}%` } },
-          { email: { [Op.like]: `%${search}%` } },
+          { email: { [Op.like]: `%${search}%` } }
         ];
       }
 
@@ -30,109 +32,106 @@ module.exports = {
         limit,
         offset,
         order: [["created_at", "DESC"]],
+
         attributes: {
           exclude: ["password", "hash_active", "reset_token", "reset_expires"],
+
+          include: [
+            [
+              sequelize.literal(`(
+                SELECT COUNT(*) 
+                FROM donations d 
+                WHERE d.donor_user_id = User.id
+              )`),
+              "donation_count"
+            ],
+            [
+              sequelize.literal(`(
+                SELECT d.collected_at
+                FROM donations d 
+                WHERE d.donor_user_id = User.id
+                ORDER BY d.collected_at DESC
+                LIMIT 1
+              )`),
+              "last_donation_date"
+            ],
+          ],
         },
       });
 
-      res.status(200).json({
+      const mapped = rows.map(u => {
+        const obj = u.toJSON();
+
+        obj.donation_count = parseInt(obj.donation_count) || 0;
+
+        obj.last_donation_date = obj.last_donation_date
+          ? new Date(obj.last_donation_date)
+          : null;
+
+        return obj;
+      });
+
+      return res.json({
         status: true,
-        message: "Tải danh sách người dùng thành công!",
+        data: mapped,
         totalItems: count,
         totalPages: Math.ceil(count / limit),
         currentPage: page,
-        data: rows,
       });
+
     } catch (error) {
-      console.error("🔥 Lỗi getAllUsers:", error);
-      res.status(500).json({
+      console.error("🔥 getAllUsers error:", error);
+      return res.status(500).json({
         status: false,
-        message: "Lỗi server khi tải danh sách người dùng!",
+        message: "Lỗi server!",
       });
     }
   },
-
   async editUser(req, res) {
     try {
       const { id } = req.params;
-      const {
-        full_name,
-        birthday,
-        gender,
-        phone,
-        email,
-        address,
-        blood_group,
-        medical_history,
-        tinh_trang,
-      } = req.body;
+      const user = await User.findByPk(id);
+      if (!user) {
+        return res.status(404).json({
+          status: false,
+          message: "Không tìm thấy người dùng!"
+        });
+      }
+
+      const { full_name, email, phone, gender, birthday, address, blood_group, tinh_trang } = req.body;
+
+      let genderMapped = null;
+      if (gender === "male") genderMapped = "Nam";
+      if (gender === "female") genderMapped = "Nữ";
+
+      const statusMapped = [1, 2].includes(parseInt(tinh_trang)) ? tinh_trang : 1;
 
       const safeData = {
         full_name,
-        birthday,
-        gender,
-        phone,
         email,
+        phone,
+        gender: genderMapped,
         address,
-        blood_group,
-        medical_history,
-        tinh_trang,
+        tinh_trang: statusMapped,
       };
 
-      const [affectedRows] = await User.update(safeData, {
-        where: {
-          id,
-          role: { [Op.ne]: "admin" },
-        },
-      });
-
-      if (affectedRows === 0) {
-        return res.status(404).json({
-          status: false,
-          message: "Không tìm thấy người dùng để cập nhật.",
-        });
+      if (user.role === "donor") {
+        safeData.birthday = birthday || null;
+        safeData.blood_group = blood_group || null;
       }
 
-      res.status(200).json({
+      await User.update(safeData, { where: { id } });
+
+      return res.json({
         status: true,
-        message: "Cập nhật người dùng thành công!",
+        message: "Cập nhật người dùng thành công!"
       });
+
     } catch (error) {
-      console.error("🔥 Lỗi editUser:", error);
-      res.status(500).json({
+      console.error("🔥 editUser error:", error);
+      return res.status(500).json({
         status: false,
-        message: "Lỗi server khi cập nhật người dùng!",
-      });
-    }
-  },
-
-  async removeUser(req, res) {
-    try {
-      const { id } = req.params;
-
-      const affectedRows = await User.destroy({
-        where: {
-          id,
-          role: { [Op.ne]: "admin" },
-        },
-      });
-
-      if (affectedRows === 0) {
-        return res.status(404).json({
-          status: false,
-          message: "Không tìm thấy người dùng để xóa.",
-        });
-      }
-
-      res.status(200).json({
-        status: true,
-        message: "Xóa người dùng thành công!",
-      });
-    } catch (error) {
-      console.error("🔥 Lỗi removeUser:", error);
-      res.status(500).json({
-        status: false,
-        message: "Lỗi server khi xóa người dùng!",
+        message: "Lỗi server khi cập nhật!",
       });
     }
   },
