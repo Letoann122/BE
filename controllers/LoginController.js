@@ -17,26 +17,44 @@ module.exports = {
 
       const user = await User.findOne({ where: { email } });
       if (!user)
-        return res.status(400).json({ status: false, message: "Email hoặc mật khẩu không đúng!" });
+        return res.status(400).json({
+          status: false,
+          message: "Email hoặc mật khẩu không đúng!",
+        });
 
-      if (user.tinh_trang === 0)
+      // ❌ chưa kích hoạt
+      if (user.tinh_trang === 0) {
         return res.status(403).json({
           status: false,
           message: "Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email!",
         });
+      }
+
+      // ❌ bị khóa
+      if (user.tinh_trang === 2) {
+        return res.status(403).json({
+          status: false,
+          message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên!",
+        });
+      }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch)
-        return res.status(400).json({ status: false, message: "Email hoặc mật khẩu không đúng!" });
+        return res.status(400).json({
+          status: false,
+          message: "Email hoặc mật khẩu không đúng!",
+        });
 
       const payload = {
-        userId: user.id, // ✅ chuẩn key
+        userId: user.id,
         full_name: user.full_name,
         email: user.email,
         role: user.role,
       };
 
-      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+      const token = jwt.sign(payload, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+      });
 
       return res.status(200).json({
         status: true,
@@ -51,7 +69,9 @@ module.exports = {
       });
     } catch (error) {
       console.error("🔥 Lỗi login:", error);
-      return res.status(500).json({ status: false, message: "Đăng nhập thất bại!" });
+      return res
+        .status(500)
+        .json({ status: false, message: "Đăng nhập thất bại!" });
     }
   },
 };
