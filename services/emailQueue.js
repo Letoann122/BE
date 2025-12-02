@@ -9,7 +9,7 @@ module.exports = {
       subject,
       template,
       payload,
-      scheduled_at,
+      scheduled_at: scheduled_at || new Date(),
       status: "pending",
     });
   },

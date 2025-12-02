@@ -164,9 +164,12 @@ adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
 adminRouter.get("/inventory", InventoryAdminController.getAllInventory);
 
 // Quản lý lịch hẹn
-adminRouter.get("/appointments", AppointmentAdminController.getAllAppointments);
-adminRouter.put("/appointments/:id/approve", AppointmentAdminController.approveAppointment);
-adminRouter.put("/appointments/:id/reject", AppointmentAdminController.rejectAppointment);
+adminRouter.get("/appointments", AppointmentAdminController.index);
+adminRouter.post("/appointments/bulk-approve", AppointmentAdminController.bulkApprove);
+adminRouter.post("/appointments/bulk-cancel", AppointmentAdminController.bulkCancel);
+adminRouter.post("/appointments/bulk-notify", AppointmentAdminController.bulkNotify);
+adminRouter.get("/appointments", AppointmentAdminController.index);
+adminRouter.get("/appointments/:id", AppointmentAdminController.detail);
 
 // ==================== CAMPAIGNS (ADMIN) ====================
 // 1) Pending list

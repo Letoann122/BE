@@ -49,6 +49,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BIGINT, 
         allowNull: true 
       },
+      approved_by_admin_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
       approved_at: { 
         type: DataTypes.DATE, 
         allowNull: true 
