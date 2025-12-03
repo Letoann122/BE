@@ -10,6 +10,9 @@ const {
   Doctor,
   Donation,
   BloodType,
+  BloodInventory,          // ✅ add
+  InventoryTransaction,    // ✅ add
+  AuditLog,                // ✅ add
   sequelize,
 } = require("../../models");
 
@@ -42,12 +45,44 @@ const hospitalAssoc = pickAssoc(DonationSite, "Hospital");
 // Getter helpers
 const getDonor = (a) => (donorAssoc ? a[donorAssoc.as] : a.donor || a.User);
 const getSite = (a) => (siteAssoc ? a[siteAssoc.as] : a.donation_site);
-const getSlot = (a) => (slotAssoc ? a[slotAssoc.as] : a.slot || a.AppointmentSlot);
+const getSlot = (a) =>
+  (slotAssoc ? a[slotAssoc.as] : a.slot || a.AppointmentSlot);
+
 const getHospitalFromSite = (site) =>
   (hospitalAssoc && site?.[hospitalAssoc.as]) ||
   site?.Hospital ||
   site?.hospital ||
   null;
+
+// ✅ helper normalize date (DATE column)
+const normalizeDate = (d) => {
+  const dt = new Date(d);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+};
+
+// ✅ helper add days
+const addDays = (d, days) => {
+  const dt = new Date(d);
+  dt.setDate(dt.getDate() + days);
+  return dt;
+};
+
+// ✅ helper create audit log (nếu model có)
+const createAudit = async ({ userId, action, entity, entityId = null, details = "" }, t) => {
+  if (!AuditLog) return null;
+  return AuditLog.create(
+    {
+      user_id: userId || null,
+      action,
+      entity,
+      entity_id: entityId,
+      details: details || null,
+      created_at: new Date(),
+    },
+    { transaction: t }
+  );
+};
 
 module.exports = {
   // =====================================================
@@ -330,6 +365,95 @@ module.exports = {
           : "[Doctor note] " + notes.trim();
 
         await appointment.save({ transaction: t });
+      }
+
+      // =====================================================
+      // ✅ ADDITION (không phá code cũ): Auto COMPLETED + stock in + audit
+      // =====================================================
+      // 1) appointment -> COMPLETED
+      appointment.status = "COMPLETED";
+      await appointment.save({ transaction: t });
+
+      await createAudit(
+        {
+          userId: loggedUserId,
+          action: "DONATION_COMPLETED",
+          entity: "donations",
+          entityId: donation.id,
+          details: `doctor_id=${doctor.id} confirmed donation for appointment_id=${appointment_id}, volume_ml=${volume_ml}, screened_ok=${screened_ok ? 1 : 0}`,
+        },
+        t
+      );
+
+      // 2) nếu screened_ok thì auto nhập kho + inventory tx IN
+      const screenedOkBool = !!screened_ok;
+
+      if (screenedOkBool) {
+        // 1 donation = 1 unit (đúng kiểu bạn đang dùng theo túi)
+        const units = 1;
+
+        const donationDate = normalizeDate(new Date(collected_at));
+        // expiry default +35 ngày (bạn muốn +42 hay theo loại máu thì đổi ở đây)
+        const expiryDate = normalizeDate(addDays(donationDate, 35));
+
+        const inventory = await BloodInventory.create(
+          {
+            donation_id: donation.id,
+            hospital_id: hospitalId,
+            blood_type_id: bloodType.id,
+            units,
+            donation_date: donationDate,
+            expiry_date: expiryDate,
+            status: "full",
+          },
+          { transaction: t }
+        );
+
+        await createAudit(
+          {
+            userId: loggedUserId,
+            action: "AUTO_STOCK_IN",
+            entity: "blood_inventory",
+            entityId: inventory.id,
+            details: `Auto stock in from donation_completed: +${units} unit, donation_id=${donation.id}, blood_type=${abo}${rh}, expiry=${toDateStr(expiryDate)}`,
+          },
+          t
+        );
+
+        const tx = await InventoryTransaction.create(
+          {
+            inventory_id: inventory.id,
+            user_id: loggedUserId || null,
+            tx_type: "IN",
+            units,
+            reason: `Auto add from donation_completed (donation_id=${donation.id})`,
+            ref_donation_id: donation.id,
+            occurred_at: new Date(),
+          },
+          { transaction: t }
+        );
+
+        await createAudit(
+          {
+            userId: loggedUserId,
+            action: "AUTO_INVENTORY_TX_IN",
+            entity: "inventory_transactions",
+            entityId: tx.id,
+            details: `TX IN created: +${units} unit, inventory_id=${inventory.id}, donation_id=${donation.id}`,
+          },
+          t
+        );
+      } else {
+        await createAudit(
+          {
+            userId: loggedUserId,
+            action: "AUTO_STOCK_IN_SKIPPED",
+            entity: "donations",
+            entityId: donation.id,
+            details: `screened_ok=0 => skip create blood_inventory & inventory_transactions`,
+          },
+          t
+        );
       }
 
       // Commit transaction

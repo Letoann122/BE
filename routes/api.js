@@ -52,6 +52,7 @@ const CampaignApprovalController = require("../controllers/admin/CampaignApprova
 const DonationHistoryController = require("../controllers/donor/DonationHistoryController");
 const SendNotificationController = require("../controllers/doctor/SendNotificationController");
 const EmergencyAlertController = require("../controllers/doctor/EmergencyAlertController");
+const DashboardDoctorController = require("../controllers/doctor/DashboardDoctorController");
 
 // ==================== AUTH ====================
 router.post(
@@ -139,6 +140,8 @@ doctorRouter.get("/support/notifications", SendNotificationController.listNotifi
 doctorRouter.post("/support/notifications", SendNotificationController.sendNotification);
 doctorRouter.post("/emergency-alert", EmergencyAlertController. createEmergencyAlert);
 doctorRouter.get("/donation-sites", DonationSitesController.getAll);
+
+doctorRouter.get("/dashboard", DashboardDoctorController.index);
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
