@@ -53,6 +53,7 @@ const DonationHistoryController = require("../controllers/donor/DonationHistoryC
 const SendNotificationController = require("../controllers/doctor/SendNotificationController");
 const EmergencyAlertController = require("../controllers/doctor/EmergencyAlertController");
 const DashboardDoctorController = require("../controllers/doctor/DashboardDoctorController");
+const ReportController = require("../controllers/doctor/ReportController");
 
 // ==================== AUTH ====================
 router.post(
@@ -124,6 +125,8 @@ doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
 
 doctorRouter.get("/donation-appointments/approved", DonationController.index);
 doctorRouter.post("/donations/complete", DonationController.completeDonation);
+doctorRouter.get("/reports/campaign-performance", ReportController.campaignPerformance);
+
 
 doctorRouter.get("/donors", DonorManagementController.list);
 doctorRouter.post("/donors/create", DonorManagementController.create);
