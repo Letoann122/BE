@@ -54,6 +54,7 @@ const SendNotificationController = require("../controllers/doctor/SendNotificati
 const EmergencyAlertController = require("../controllers/doctor/EmergencyAlertController");
 const DashboardDoctorController = require("../controllers/doctor/DashboardDoctorController");
 const ReportController = require("../controllers/doctor/ReportController");
+const BloodInventoryDashboardController = require("../controllers/admin/BloodInventoryDashboardController");
 
 // ==================== AUTH ====================
 router.post(
@@ -204,6 +205,8 @@ adminRouter.get("/donation-sites", CampaignsManagementController.getDonationSite
 adminRouter.get("/campaign-registrations", CampaignController.adminListCampaignRegistrations);
 adminRouter.patch("/campaign-registrations/:id/approve", CampaignController.adminApproveCampaignRegistration);
 adminRouter.patch("/campaign-registrations/:id/reject", CampaignController.adminRejectCampaignRegistration);
+
+adminRouter.get("/blood-inventory/dashboard", BloodInventoryDashboardController.getDashboard);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
