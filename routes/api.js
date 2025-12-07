@@ -164,7 +164,10 @@ adminRouter.put("/users/:id", AdminDonorController.editUser);
 
 // Dashboard
 adminRouter.get("/dashboard", DashboardController.getDashboardStats);
-
+router.get("/doctors/pending", AcpDoctorController.getPending);
+router.post("/doctors/search", AcpDoctorController.searchDoctor); // nếu bạn đang dùng
+router.put("/doctors/:id/approve", AcpDoctorController.approve);
+router.put("/doctors/:id/reject", AcpDoctorController.reject);
 // ACP bác sĩ
 adminRouter.get("/doctors/pending", AcpDoctorController.getPending);
 adminRouter.put("/doctors/:id/approve", AcpDoctorController.approve);
