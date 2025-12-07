@@ -15,7 +15,7 @@ const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const BookingDonationRequest = require("../requests/client/BookingDonationRequest");
-
+const NewsDoctorController = require("../controllers/doctor/NewsDoctorController");
 // ===== COMMON =====
 const NewsController = require("../controllers/NewsController");
 const CampaignController = require("../controllers/donor/CampaignController");
@@ -55,6 +55,7 @@ const EmergencyAlertController = require("../controllers/doctor/EmergencyAlertCo
 const DashboardDoctorController = require("../controllers/doctor/DashboardDoctorController");
 const ReportController = require("../controllers/doctor/ReportController");
 const BloodInventoryDashboardController = require("../controllers/admin/BloodInventoryDashboardController");
+const AdminNewsController = require("../controllers/admin/AdminNewsController");
 
 // ==================== AUTH ====================
 router.post(
@@ -128,6 +129,9 @@ doctorRouter.get("/donation-appointments/approved", DonationController.index);
 doctorRouter.post("/donations/complete", DonationController.completeDonation);
 doctorRouter.get("/reports/campaign-performance", ReportController.campaignPerformance);
 
+doctorRouter.get("/news", NewsDoctorController.getMyNews);
+doctorRouter.post("/news", NewsDoctorController.create);
+doctorRouter.put("/news/:id", NewsDoctorController.update);
 
 doctorRouter.get("/donors", DonorManagementController.list);
 doctorRouter.post("/donors/create", DonorManagementController.create);
@@ -207,6 +211,12 @@ adminRouter.patch("/campaign-registrations/:id/approve", CampaignController.admi
 adminRouter.patch("/campaign-registrations/:id/reject", CampaignController.adminRejectCampaignRegistration);
 
 adminRouter.get("/blood-inventory/dashboard", BloodInventoryDashboardController.getDashboard);
+
+adminRouter.get("/news/pending", AdminNewsController.getPendingNews);
+adminRouter.get("/news", AdminNewsController.getAllNews);
+adminRouter.patch("/news/:id/approve", AdminNewsController.approveNews);
+adminRouter.patch("/news/:id/reject", AdminNewsController.rejectNews);
+adminRouter.delete("/news/:id", AdminNewsController.deleteNews);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
