@@ -10,9 +10,9 @@ const {
   Doctor,
   Donation,
   BloodType,
-  BloodInventory,          // ✅ add
-  InventoryTransaction,    // ✅ add
-  AuditLog,                // ✅ add
+  BloodInventory,
+  InventoryTransaction,
+  AuditLog,
   sequelize,
 } = require("../../models");
 
@@ -54,22 +54,25 @@ const getHospitalFromSite = (site) =>
   site?.hospital ||
   null;
 
-// ✅ helper normalize date (DATE column)
+// helper normalize date (DATE column)
 const normalizeDate = (d) => {
   const dt = new Date(d);
   dt.setHours(0, 0, 0, 0);
   return dt;
 };
 
-// ✅ helper add days
+// helper add days
 const addDays = (d, days) => {
   const dt = new Date(d);
   dt.setDate(dt.getDate() + days);
   return dt;
 };
 
-// ✅ helper create audit log (nếu model có)
-const createAudit = async ({ userId, action, entity, entityId = null, details = "" }, t) => {
+// helper create audit log
+const createAudit = async (
+  { userId, action, entity, entityId = null, details = "" },
+  t
+) => {
   if (!AuditLog) return null;
   return AuditLog.create(
     {
@@ -102,7 +105,7 @@ module.exports = {
         where.scheduled_at = {
           [Op.between]: [
             new Date(`${from_date}T00:00:00`),
-            new Date(`${toDate}T23:59:59.999`),
+            new Date(`${to_date}T23:59:59.999`),
           ],
         };
       } else if (from_date) {
@@ -344,6 +347,13 @@ module.exports = {
       const site = getSite(appointment);
       const hospitalId = site?.hospital_id || null;
 
+      // ✅ chuẩn hoá bool cho screened_ok (nhận true/false, 1/0, "1"/"0")
+      const screenedOkBool =
+        screened_ok === true ||
+        screened_ok === 1 ||
+        screened_ok === "1" ||
+        screened_ok === "true";
+
       const donation = await Donation.create(
         {
           appointment_id,
@@ -351,7 +361,7 @@ module.exports = {
           blood_type_id: bloodType.id,
           volume_ml,
           collected_at: new Date(collected_at),
-          screened_ok: screened_ok ? 1 : 0,
+          screened_ok: screenedOkBool ? 1 : 0,
           confirmed_by_doctor_id: doctor.id,
           confirmed_at: new Date(),
           notes: notes?.trim() || null,
@@ -367,9 +377,6 @@ module.exports = {
         await appointment.save({ transaction: t });
       }
 
-      // =====================================================
-      // ✅ ADDITION (không phá code cũ): Auto COMPLETED + stock in + audit
-      // =====================================================
       // 1) appointment -> COMPLETED
       appointment.status = "COMPLETED";
       await appointment.save({ transaction: t });
@@ -380,20 +387,16 @@ module.exports = {
           action: "DONATION_COMPLETED",
           entity: "donations",
           entityId: donation.id,
-          details: `doctor_id=${doctor.id} confirmed donation for appointment_id=${appointment_id}, volume_ml=${volume_ml}, screened_ok=${screened_ok ? 1 : 0}`,
+          details: `doctor_id=${doctor.id} confirmed donation for appointment_id=${appointment_id}, volume_ml=${volume_ml}, screened_ok=${screenedOkBool ? 1 : 0}`,
         },
         t
       );
 
-      // 2) nếu screened_ok thì auto nhập kho + inventory tx IN
-      const screenedOkBool = !!screened_ok;
-
+      // 2) chỉ auto nhập kho khi screened_ok = true
       if (screenedOkBool) {
-        // 1 donation = 1 unit (đúng kiểu bạn đang dùng theo túi)
         const units = 1;
 
         const donationDate = normalizeDate(new Date(collected_at));
-        // expiry default +35 ngày (bạn muốn +42 hay theo loại máu thì đổi ở đây)
         const expiryDate = normalizeDate(addDays(donationDate, 35));
 
         const inventory = await BloodInventory.create(
@@ -415,7 +418,9 @@ module.exports = {
             action: "AUTO_STOCK_IN",
             entity: "blood_inventory",
             entityId: inventory.id,
-            details: `Auto stock in from donation_completed: +${units} unit, donation_id=${donation.id}, blood_type=${abo}${rh}, expiry=${toDateStr(expiryDate)}`,
+            details: `Auto stock in from donation_completed: +${units} unit, donation_id=${donation.id}, blood_type=${abo}${rh}, expiry=${toDateStr(
+              expiryDate
+            )}`,
           },
           t
         );
@@ -450,13 +455,13 @@ module.exports = {
             action: "AUTO_STOCK_IN_SKIPPED",
             entity: "donations",
             entityId: donation.id,
-            details: `screened_ok=0 => skip create blood_inventory & inventory_transactions`,
+            details:
+              "screened_ok=0 => skip create blood_inventory & inventory_transactions",
           },
           t
         );
       }
 
-      // Commit transaction
       await t.commit();
 
       // Send email (after commit)

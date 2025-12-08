@@ -18,8 +18,39 @@ module.exports = {
       } = req.validated;
 
       const scheduledDate = new Date(scheduled_at);
+      const now = new Date();
 
-      // chặn trùng trong 1 ngày
+      // SỬA: Trả về 200 để FE tự handle toast
+      if (scheduledDate < now) {
+        return res.json({
+          status: false,
+          message: "Khung giờ bạn chọn đã trôi qua. Vui lòng chọn thời gian khác!",
+        });
+      }
+
+      const lastDonation = await Appointment.findOne({
+        where: {
+          donor_id,
+          status: "COMPLETED",
+        },
+        order: [["scheduled_at", "DESC"]],
+      });
+
+      if (lastDonation) {
+        const lastDate = new Date(lastDonation.scheduled_at);
+        const nextAllowedDate = new Date(lastDate);
+        nextAllowedDate.setMonth(nextAllowedDate.getMonth() + 3);
+
+        // SỬA: Trả về 200 để FE tự handle toast
+        if (scheduledDate < nextAllowedDate) {
+          const dateStr = nextAllowedDate.toLocaleDateString("vi-VN");
+          return res.json({
+            status: false,
+            message: `Bạn cần nghỉ ngơi sau lần hiến trước. Bạn có thể hiến máu lại từ ngày ${dateStr}.`,
+          });
+        }
+      }
+
       const sameDay = new Date(
         scheduledDate.getFullYear(),
         scheduledDate.getMonth(),
@@ -32,14 +63,15 @@ module.exports = {
         where: {
           donor_id,
           scheduled_at: { [Op.gte]: sameDay, [Op.lt]: nextDay },
-          status: { [Op.in]: ["REQUESTED", "APPROVED", "BOOKED"] },
+          status: { [Op.in]: ["REQUESTED", "APPROVED", "BOOKED", "COMPLETED"] },
         },
       });
 
+      // SỬA: Trả về 200 để FE tự handle toast
       if (existed) {
-        return res.status(422).json({
+        return res.json({
           status: false,
-          message: "Bạn đã có lịch hiến máu trong ngày này!",
+          message: "Bạn đã có lịch đăng ký hoặc đã hiến máu trong ngày này!",
         });
       }
 
@@ -54,9 +86,6 @@ module.exports = {
         status: "REQUESTED",
       });
 
-      /* ========================================================
-         EMAIL JOB — Gửi "TRƯỚC KHI HIẾN MÁU", trước lịch 1 ngày
-      ========================================================= */
       const sendAt = new Date(scheduledDate);
       sendAt.setDate(sendAt.getDate() - 1);
 
@@ -122,7 +151,8 @@ module.exports = {
       }
 
       if (!["REQUESTED", "APPROVED", "BOOKED"].includes(appt.status)) {
-        return res.status(422).json({
+        // SỬA: Trả về 200
+        return res.json({
           status: false,
           message: "Lịch không thể huỷ ở trạng thái hiện tại!",
         });
