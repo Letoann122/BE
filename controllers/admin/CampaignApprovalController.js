@@ -3,20 +3,30 @@
 const { Op } = require("sequelize");
 const { Campaign, User, DonationSite } = require("../../models");
 
+// format dd/MM/yyyy
+const fmt = (d) => {
+  if (!d) return "";
+  const dt = new Date(d);
+  const day = String(dt.getUTCDate()).padStart(2, "0");
+  const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const year = dt.getUTCFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 module.exports = {
-  // GET /admin/campaigns/pending?q=&type=
+  // ===========================================
+  // GET /admin/campaigns/pending
+  // ===========================================
   async listPending(req, res) {
     try {
       const { q = "", type = "" } = req.query;
 
       const where = { approval_status: "pending" };
 
-      // filter type (0 = định kỳ, 1 = khẩn cấp)
       if (type === "0") where.is_emergency = 0;
       if (type === "1") where.is_emergency = 1;
 
-      // search
-      const keyword = String(q || "").trim();
+      const keyword = q.trim();
       if (keyword) {
         where[Op.or] = [
           { title: { [Op.like]: `%${keyword}%` } },
@@ -28,37 +38,78 @@ module.exports = {
       const campaigns = await Campaign.findAll({
         where,
         include: [
-          { model: User, as: "creator", attributes: ["id", "full_name", "email"] },
+          { model: User, as: "creator", attributes: ["id", "full_name"] },
           { model: DonationSite, as: "donation_site" },
         ],
         order: [["created_at", "DESC"]],
       });
 
+      // Gắn thêm trường format ngày
+      campaigns.forEach((c) => {
+        c.setDataValue("start_date_fmt", fmt(c.start_date));
+        c.setDataValue("end_date_fmt", fmt(c.end_date));
+      });
+
       return res.json({ status: true, data: campaigns });
     } catch (err) {
-      console.error("CampaignApprovalController.listPending error:", err);
+      console.error("listPending error:", err);
       return res.status(500).json({ status: false, message: err.message });
     }
   },
 
-  // PATCH /admin/campaigns/:id/approve
+  // ===========================================
+  // GET /admin/campaigns  (QUẢN LÝ)
+  // ===========================================
+  async listAll(req, res) {
+    try {
+      const { q = "", status = "", approval_status = "" } = req.query;
+      const where = {};
+
+      if (q.trim()) {
+        where[Op.or] = [
+          { title: { [Op.like]: `%${q}%` } },
+          { content: { [Op.like]: `%${q}%` } },
+          { location: { [Op.like]: `%${q}%` } },
+        ];
+      }
+
+      if (approval_status) where.approval_status = approval_status;
+      if (status) where.status = status;
+
+      const campaigns = await Campaign.findAll({
+        where,
+        include: [
+          { model: User, as: "creator", attributes: ["id", "full_name"] },
+          { model: DonationSite, as: "donation_site" },
+        ],
+        order: [["created_at", "DESC"]],
+      });
+
+      // Gắn format ngày giống PENDING
+      campaigns.forEach((c) => {
+        c.setDataValue("start_date_fmt", fmt(c.start_date));
+        c.setDataValue("end_date_fmt", fmt(c.end_date));
+      });
+
+      return res.json({ status: true, data: campaigns });
+    } catch (err) {
+      console.error("listAll error:", err);
+      return res.status(500).json({ status: false, message: err.message });
+    }
+  },
+
+  // ===========================================
+  // APPROVE
+  // ===========================================
   async approve(req, res) {
     try {
       const { id } = req.params;
 
       const campaign = await Campaign.findByPk(id);
-      if (!campaign) {
-        return res.json({ status: false, message: "Không tìm thấy chiến dịch" });
-      }
+      if (!campaign) return res.json({ status: false, message: "Không tìm thấy chiến dịch" });
 
-      // nếu đã approved rồi thì thôi
-      if (campaign.approval_status === "approved") {
-        return res.json({
-          status: true,
-          message: "Chiến dịch đã được duyệt trước đó.",
-          data: campaign,
-        });
-      }
+      if (campaign.approval_status === "approved")
+        return res.json({ status: true, message: "Đã duyệt trước đó", data: campaign });
 
       await campaign.update({
         approval_status: "approved",
@@ -67,35 +118,26 @@ module.exports = {
         rejected_reason: null,
       });
 
-      await campaign.reload();
-
-      return res.json({
-        status: true,
-        message: "Duyệt chiến dịch thành công",
-        data: campaign,
-      });
+      return res.json({ status: true, message: "Duyệt thành công", data: campaign });
     } catch (err) {
-      console.error("CampaignApprovalController.approve error:", err);
+      console.error("approve error:", err);
       return res.status(500).json({ status: false, message: err.message });
     }
   },
 
-  // PATCH /admin/campaigns/:id/reject  { reason }
+  // ===========================================
+  // REJECT
+  // ===========================================
   async reject(req, res) {
     try {
       const { id } = req.params;
-      const reason = String(req.body?.reason || "").trim();
+      const reason = (req.body.reason || "").trim();
 
-      if (!reason) {
-        return res.json({ status: false, message: "Vui lòng nhập lý do từ chối!" });
-      }
+      if (!reason) return res.json({ status: false, message: "Vui lòng nhập lý do" });
 
       const campaign = await Campaign.findByPk(id);
-      if (!campaign) {
-        return res.json({ status: false, message: "Không tìm thấy chiến dịch" });
-      }
+      if (!campaign) return res.json({ status: false, message: "Không tìm thấy chiến dịch" });
 
-      // nếu đã rejected rồi thì vẫn update lại reason
       await campaign.update({
         approval_status: "rejected",
         reviewed_by_admin_id: req.user.userId,
@@ -103,15 +145,9 @@ module.exports = {
         rejected_reason: reason,
       });
 
-      await campaign.reload();
-
-      return res.json({
-        status: true,
-        message: "Từ chối chiến dịch thành công",
-        data: campaign,
-      });
+      return res.json({ status: true, message: "Từ chối thành công", data: campaign });
     } catch (err) {
-      console.error("CampaignApprovalController.reject error:", err);
+      console.error("reject error:", err);
       return res.status(500).json({ status: false, message: err.message });
     }
   },

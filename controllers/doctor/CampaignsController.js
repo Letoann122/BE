@@ -255,6 +255,9 @@ module.exports = {
   // ============================================================================
   // 6. GET APPOINTMENTS
   // ============================================================================
+  // ============================================================================
+  // 6. GET APPOINTMENTS (format date dd/mm/yyyy + HH:mm)
+  // ============================================================================
   async getCampaignAppointments(req, res) {
     try {
       const id = req.params.id;
@@ -276,29 +279,51 @@ module.exports = {
       const mapUser = {};
       donorList.forEach((u) => (mapUser[u.id] = u));
 
+      // Helper format ngày
+      const fmtDate = (d) => {
+        if (!d) return "";
+        const dt = new Date(d);
+        const day = String(dt.getDate()).padStart(2, "0");
+        const month = String(dt.getMonth() + 1).padStart(2, "0");
+        const year = dt.getFullYear();
+        return `${day}/${month}/${year}`;  // dd/mm/yyyy
+      };
+
+      const fmtTime = (d) => {
+        if (!d) return "";
+        const dt = new Date(d);
+        const h = String(dt.getHours()).padStart(2, "0");
+        const m = String(dt.getMinutes()).padStart(2, "0");
+        return `${h}:${m}`; // HH:mm
+      };
+
       const list = appointments.map((a) => {
-        const dt = a.scheduled_at ? new Date(a.scheduled_at) : null;
         return {
           id: a.id,
           donorName: mapUser[a.donor_id]?.full_name || "Không rõ",
           donorPhone: mapUser[a.donor_id]?.phone || "Không rõ",
           bloodType: mapUser[a.donor_id]?.blood_group || "Không rõ",
-          date: dt ? dt.toISOString().slice(0, 10) : "",
-          time: dt ? dt.toISOString().slice(11, 16) : "",
+
+          // 👉 TRẢ VỀ DẠNG VN
+          date: fmtDate(a.scheduled_at),
+          time: fmtTime(a.scheduled_at),
+
           status: a.status,
           statusClass:
-            a.status === "APPROVED"
+            a.status === "COMPLETED"
               ? "bg-success text-white"
-              : a.status === "PENDING"
-              ? "bg-warning text-dark"
-              : "bg-danger text-white",
+              : a.status === "REQUESTED"
+                ? "bg-warning text-dark"
+                : "bg-danger text-white",
         };
       });
 
       return res.json({ status: true, data: list });
+
     } catch (err) {
       console.error("getCampaignAppointments error:", err);
       return res.status(500).json({ status: false, message: err.message });
     }
   },
+
 };

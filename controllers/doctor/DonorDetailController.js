@@ -1,5 +1,6 @@
 "use strict";
 
+const { Op } = require("sequelize");
 const {
   Donor,
   User,
@@ -8,6 +9,7 @@ const {
   Appointment,
   DonationSite,
   Hospital,
+  Campaign, // ✅ thêm Campaign (nếu bạn đã có model này)
 } = require("../../models");
 
 module.exports = {
@@ -32,18 +34,12 @@ module.exports = {
               "tinh_trang",
             ],
           },
-          {
-            model: BloodType,
-            attributes: ["abo", "rh"],
-          },
+          { model: BloodType, attributes: ["abo", "rh"] },
         ],
       });
 
       if (!donor) {
-        return res.status(404).json({
-          status: false,
-          message: "Donor không tồn tại",
-        });
+        return res.status(404).json({ status: false, message: "Donor không tồn tại" });
       }
 
       // 2️⃣ Lấy lịch sử hiến máu
@@ -54,14 +50,9 @@ module.exports = {
             model: Appointment,
             include: [
               {
-                // dùng đúng alias đã định nghĩa trong model Appointment
                 model: DonationSite,
                 as: "donation_site",
-                include: [
-                  {
-                    model: Hospital, // Hospital gắn với DonationSite (xem donation_site.js)
-                  },
-                ],
+                include: [{ model: Hospital }],
               },
             ],
           },
@@ -72,33 +63,62 @@ module.exports = {
       // 3️⃣ Lần hiến máu gần nhất
       const lastDonation = history.length > 0 ? history[0] : null;
 
-    
+      // ✅ 4️⃣ Bổ sung: gom campaign_id để query 1 lần (tránh N+1)
+      const campaignIds = Array.from(
+        new Set(
+          history
+            .map((x) => x?.campaign_id || x?.Appointment?.campaign_id) // hỗ trợ cả donation.campaign_id / appointment.campaign_id
+            .filter(Boolean)
+        )
+      );
+
+      let campaignMap = new Map();
+      if (campaignIds.length && Campaign) {
+        const campaigns = await Campaign.findAll({
+          where: { id: { [Op.in]: campaignIds } },
+          attributes: ["id", "title", "location"], // dùng đúng field bạn nói: title + location
+        });
+        campaignMap = new Map(campaigns.map((c) => [c.id, c]));
+      }
 
       // 5️⃣ Nhóm máu hiển thị
       const bloodType = donor.BloodType
         ? `${donor.BloodType.abo}${donor.BloodType.rh}`
         : donor.User.blood_group || "Không rõ";
 
-      // Helper get site + hospital từ 1 bản ghi Donation
+      // Helper map record (✅ fix chiến dịch)
       const mapDonationRecord = (item) => {
         const appointment = item.Appointment || null;
-        const site = appointment && appointment.donation_site
-          ? appointment.donation_site
-          : null;
-        const hospital = site && site.Hospital ? site.Hospital : null;
+
+        const site = appointment?.donation_site || null;
+        const hospital = site?.Hospital || null;
+
+        // ✅ detect campaign
+        const cid = item?.campaign_id || appointment?.campaign_id || null;
+        const campaign = cid ? campaignMap.get(cid) : null;
+
+        // ✅ nếu không có donation_site/hospital => ưu tiên hiến theo chiến dịch
+        const isCampaign = !site && !!(campaign || appointment?.location);
+
+        const displaySite = isCampaign
+          ? (campaign?.location || appointment?.location || "")
+          : (site?.name || "");
+
+        const displayHospital = isCampaign
+          ? (campaign?.title || appointment?.campaign_name || "")
+          : (hospital?.name || "");
 
         return {
-          date: item.collected_at
-            ? item.collected_at.toISOString().slice(0, 10)
-            : null,
-          volume: item.volume_ml,
-          site: site ? site.name : "",
-          hospital: hospital ? hospital.name : "",
+          date: item.collected_at ? item.collected_at.toISOString().slice(0, 10) : null,
+          volume: item.volume_ml || 0,
+          site: displaySite,
+          hospital: displayHospital,
           status: "Hoàn thành",
+          // optional: type để FE muốn badge thì có
+          type: isCampaign ? "campaign" : "normal",
         };
       };
 
-      // 6️⃣ Format response
       return res.json({
         status: true,
         data: {
@@ -113,20 +133,13 @@ module.exports = {
             bloodType,
             status: donor.User.tinh_trang === 1 ? "Hoạt động" : "Tạm ngừng",
           },
-
           lastDonation: lastDonation ? mapDonationRecord(lastDonation) : null,
-
-
           history: history.map(mapDonationRecord),
         },
       });
-      //abc
     } catch (error) {
       console.error("❌ Lỗi lấy chi tiết donor:", error);
-      return res.status(500).json({
-        status: false,
-        error: error.message,
-      });
+      return res.status(500).json({ status: false, error: error.message });
     }
   },
 };

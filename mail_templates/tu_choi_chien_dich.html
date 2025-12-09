@@ -1,0 +1,29 @@
+<h3>Chào {{ho_ten}},</h3>
+
+<p>
+  Rất tiếc, đơn đăng ký tham gia <b>Chiến dịch hiến máu</b> của bạn 
+  <b>không được duyệt</b>.
+</p>
+
+<p>
+  <b>Tên chiến dịch:</b> {{campaign_title}}
+</p>
+
+<ul>
+  <li><b>Mã lịch:</b> {{appointment_code}}</li>
+  <li><b>Ngày dự kiến:</b> {{ngay_hien}}</li>
+  <li><b>Khung giờ:</b> {{khung_gio}}</li>
+  <li><b>Địa điểm:</b> {{dia_diem}}</li>
+</ul>
+
+<p><b>Lý do từ chối:</b> {{rejected_reason}}</p>
+
+{{#if ghi_chu}}
+<p><b>Ghi chú thêm:</b> {{ghi_chu}}</p>
+{{/if}}
+
+<p>
+  Nếu bạn vẫn muốn tham gia chiến dịch hoặc muốn thay đổi thông tin đăng ký, vui lòng liên hệ chúng tôi để được hỗ trợ.
+</p>
+
+<p>Trân trọng,<br />Smart Blood Donation System</p>

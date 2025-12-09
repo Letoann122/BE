@@ -15,7 +15,7 @@ const validateRequest = require("../middlewares/validateRequest");
 const LoginRequest = require("../middlewares/LoginRequest");
 const CreateTaiKhoanRequest = require("../requests/client/CreateTaiKhoanRequest");
 const BookingDonationRequest = require("../requests/client/BookingDonationRequest");
-
+const NewsDoctorController = require("../controllers/doctor/NewsDoctorController");
 // ===== COMMON =====
 const NewsController = require("../controllers/NewsController");
 const CampaignController = require("../controllers/donor/CampaignController");
@@ -38,6 +38,7 @@ const DonationController = require("../controllers/doctor/DonationController");
 const DonorManagementController = require("../controllers/doctor/DonorManagementController");
 const DonorDetailController = require("../controllers/doctor/DonorDetailController");
 const CampaignsController = require("../controllers/doctor/CampaignsController");
+const sendNotificationController = require("../controllers/doctor/SendNotificationController");
 
 // ===== ADMIN =====
 const AdminController = require("../controllers/admin/AdminController");
@@ -46,11 +47,15 @@ const DashboardController = require("../controllers/admin/DashboardController");
 const AcpDoctorController = require("../controllers/admin/AcpDoctorController");
 const InventoryAdminController = require("../controllers/admin/InventoryAdminController");
 const AppointmentAdminController = require("../controllers/admin/AppointmentAdminController");
-
-// ✅ campaigns admin: tách đúng 2 controller
-const CampaignsManagementController = require("../controllers/admin/CampaignsManagementController"); // management (list/detail/update/close/sites)
-const CampaignApprovalController = require("../controllers/admin/CampaignApprovalController"); // pending/approve/reject
+const CampaignsManagementController = require("../controllers/admin/CampaignsManagementController"); 
+const CampaignApprovalController = require("../controllers/admin/CampaignApprovalController"); 
 const DonationHistoryController = require("../controllers/donor/DonationHistoryController");
+const SendNotificationController = require("../controllers/doctor/SendNotificationController");
+const EmergencyAlertController = require("../controllers/doctor/EmergencyAlertController");
+const DashboardDoctorController = require("../controllers/doctor/DashboardDoctorController");
+const ReportController = require("../controllers/doctor/ReportController");
+const BloodInventoryDashboardController = require("../controllers/admin/BloodInventoryDashboardController");
+const AdminNewsController = require("../controllers/admin/AdminNewsController");
 
 // ==================== AUTH ====================
 router.post(
@@ -71,6 +76,7 @@ router.get("/news", NewsController.getAll);
 router.get("/news/:id", NewsController.getById);
 router.get("/public/campaigns", CampaignController.publicCampaigns);
 router.get("/public/campaigns/:id", CampaignController.publicCampaignDetail);
+router.get("/public/emergency-alert", EmergencyAlertController.getEmergencyAlert);
 
 // ==================== DONOR ROUTES ====================
 const donorRouter = express.Router();
@@ -121,6 +127,11 @@ doctorRouter.delete("/blood-inventory/:id", BloodInventoryController.delete);
 
 doctorRouter.get("/donation-appointments/approved", DonationController.index);
 doctorRouter.post("/donations/complete", DonationController.completeDonation);
+doctorRouter.get("/reports/campaign-performance", ReportController.campaignPerformance);
+
+doctorRouter.get("/news", NewsDoctorController.getMyNews);
+doctorRouter.post("/news", NewsDoctorController.create);
+doctorRouter.put("/news/:id", NewsDoctorController.update);
 
 doctorRouter.get("/donors", DonorManagementController.list);
 doctorRouter.post("/donors/create", DonorManagementController.create);
@@ -133,8 +144,12 @@ doctorRouter.post("/campaigns", CampaignsController.createCampaign);
 doctorRouter.put("/campaigns/:id", CampaignsController.updateCampaign);
 doctorRouter.patch("/campaigns/:id/close", CampaignsController.closeCampaign);
 doctorRouter.get("/campaigns/:id/appointments", CampaignsController.getCampaignAppointments);
-
+doctorRouter.get("/support/notifications", SendNotificationController.listNotifications);
+doctorRouter.post("/support/notifications", SendNotificationController.sendNotification);
+doctorRouter.post("/emergency-alert", EmergencyAlertController. createEmergencyAlert);
 doctorRouter.get("/donation-sites", DonationSitesController.getAll);
+
+doctorRouter.get("/dashboard", DashboardDoctorController.index);
 
 router.use("/doctor", verifyToken("doctor"), doctorRouter);
 
@@ -146,11 +161,13 @@ adminRouter.get("/check-token", AdminController.checkToken);
 // Quản lý user
 adminRouter.get("/users", AdminDonorController.getAllUsers);
 adminRouter.put("/users/:id", AdminDonorController.editUser);
-adminRouter.delete("/users/:id", AdminDonorController.removeUser);
 
 // Dashboard
 adminRouter.get("/dashboard", DashboardController.getDashboardStats);
-
+router.get("/doctors/pending", AcpDoctorController.getPending);
+router.post("/doctors/search", AcpDoctorController.searchDoctor); // nếu bạn đang dùng
+router.put("/doctors/:id/approve", AcpDoctorController.approve);
+router.put("/doctors/:id/reject", AcpDoctorController.reject);
 // ACP bác sĩ
 adminRouter.get("/doctors/pending", AcpDoctorController.getPending);
 adminRouter.put("/doctors/:id/approve", AcpDoctorController.approve);
@@ -161,9 +178,12 @@ adminRouter.post("/doctors/search", AcpDoctorController.searchDoctor);
 adminRouter.get("/inventory", InventoryAdminController.getAllInventory);
 
 // Quản lý lịch hẹn
-adminRouter.get("/appointments", AppointmentAdminController.getAllAppointments);
-adminRouter.put("/appointments/:id/approve", AppointmentAdminController.approveAppointment);
-adminRouter.put("/appointments/:id/reject", AppointmentAdminController.rejectAppointment);
+adminRouter.get("/appointments", AppointmentAdminController.index);
+adminRouter.post("/appointments/bulk-approve", AppointmentAdminController.bulkApprove);
+adminRouter.post("/appointments/bulk-cancel", AppointmentAdminController.bulkCancel);
+adminRouter.post("/appointments/bulk-notify", AppointmentAdminController.bulkNotify);
+adminRouter.get("/appointments", AppointmentAdminController.index);
+adminRouter.get("/appointments/:id", AppointmentAdminController.detail);
 
 // ==================== CAMPAIGNS (ADMIN) ====================
 // 1) Pending list
@@ -178,6 +198,7 @@ adminRouter.get("/campaigns", CampaignsController.getAllCampaigns);
 
 // 4) Detail
 adminRouter.get("/campaigns/:id", CampaignsController.getCampaignDetail);
+adminRouter.get("/campaigns/:id/appointments", CampaignsController.getCampaignAppointments);
 
 // 5) Update
 adminRouter.put("/campaigns/:id", CampaignsController.updateCampaign);
@@ -191,6 +212,14 @@ adminRouter.get("/donation-sites", CampaignsManagementController.getDonationSite
 adminRouter.get("/campaign-registrations", CampaignController.adminListCampaignRegistrations);
 adminRouter.patch("/campaign-registrations/:id/approve", CampaignController.adminApproveCampaignRegistration);
 adminRouter.patch("/campaign-registrations/:id/reject", CampaignController.adminRejectCampaignRegistration);
+
+adminRouter.get("/blood-inventory/dashboard", BloodInventoryDashboardController.getDashboard);
+
+adminRouter.get("/news/pending", AdminNewsController.getPendingNews);
+adminRouter.get("/news", AdminNewsController.getAllNews);
+adminRouter.patch("/news/:id/approve", AdminNewsController.approveNews);
+adminRouter.patch("/news/:id/reject", AdminNewsController.rejectNews);
+adminRouter.delete("/news/:id", AdminNewsController.deleteNews);
 
 // Bọc middleware verifyToken cho toàn bộ /admin
 router.use("/admin", verifyToken("admin"), adminRouter);
