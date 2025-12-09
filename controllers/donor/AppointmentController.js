@@ -1,6 +1,6 @@
 "use strict";
 
-const { Appointment, DonationSite } = require("../../models");
+const { Appointment, DonationSite, Campaign } = require("../../models");
 const { Op } = require("sequelize");
 const emailQueue = require("../../services/emailQueue");
 
@@ -20,11 +20,11 @@ module.exports = {
       const scheduledDate = new Date(scheduled_at);
       const now = new Date();
 
-      // SỬA: Trả về 200 để FE tự handle toast
       if (scheduledDate < now) {
         return res.json({
           status: false,
-          message: "Khung giờ bạn chọn đã trôi qua. Vui lòng chọn thời gian khác!",
+          message:
+            "Khung giờ bạn chọn đã trôi qua. Vui lòng chọn thời gian khác!",
         });
       }
 
@@ -41,7 +41,6 @@ module.exports = {
         const nextAllowedDate = new Date(lastDate);
         nextAllowedDate.setMonth(nextAllowedDate.getMonth() + 3);
 
-        // SỬA: Trả về 200 để FE tự handle toast
         if (scheduledDate < nextAllowedDate) {
           const dateStr = nextAllowedDate.toLocaleDateString("vi-VN");
           return res.json({
@@ -63,11 +62,12 @@ module.exports = {
         where: {
           donor_id,
           scheduled_at: { [Op.gte]: sameDay, [Op.lt]: nextDay },
-          status: { [Op.in]: ["REQUESTED", "APPROVED", "BOOKED", "COMPLETED"] },
+          status: {
+            [Op.in]: ["REQUESTED", "APPROVED", "BOOKED", "COMPLETED"],
+          },
         },
       });
 
-      // SỬA: Trả về 200 để FE tự handle toast
       if (existed) {
         return res.json({
           status: false,
@@ -104,7 +104,8 @@ module.exports = {
 
       return res.status(200).json({
         status: true,
-        message: "Đặt lịch hiến máu thành công! Vui lòng chờ bác sĩ duyệt.",
+        message:
+          "Đặt lịch hiến máu thành công! Vui lòng chờ bác sĩ duyệt.",
         data: newAppt,
       });
     } catch (error) {
@@ -121,11 +122,34 @@ module.exports = {
 
       const rows = await Appointment.findAll({
         where: { donor_id },
-        include: [{ model: DonationSite, as: "donation_site" }],
+        include: [
+          {
+            model: DonationSite,
+            as: "donation_site",
+          },
+          {
+            model: Campaign,
+            as: "campaign",
+          },
+        ],
         order: [["scheduled_at", "DESC"]],
       });
 
-      return res.json({ status: true, data: rows });
+      const data = rows.map((appt) => {
+        const plain = appt.toJSON();
+
+        if (!plain.donation_site && plain.campaign && plain.campaign.location) {
+          plain.donation_site = {
+            id: null,
+            name: plain.campaign.location,
+            address: plain.campaign.location,
+          };
+        }
+
+        return plain;
+      });
+
+      return res.json({ status: true, data });
     } catch (e) {
       return res.status(500).json({
         status: false,
@@ -151,7 +175,6 @@ module.exports = {
       }
 
       if (!["REQUESTED", "APPROVED", "BOOKED"].includes(appt.status)) {
-        // SỬA: Trả về 200
         return res.json({
           status: false,
           message: "Lịch không thể huỷ ở trạng thái hiện tại!",

@@ -48,7 +48,7 @@ module.exports = {
         gender,
         phone,
         address,
-        blood_group,
+        // ❌ KHÔNG lấy blood_group từ body nữa
         medical_history,
       } = req.body;
 
@@ -56,7 +56,7 @@ module.exports = {
       const errors = {};
 
       if (!full_name || full_name.trim() === "") {
-        errors.full_name = ["Họ và tên không được để trống."];
+        errors.full_name = ["Họ và tên không được để trống."]; 
       }
 
       if (!birthday) {
@@ -67,9 +67,7 @@ module.exports = {
         errors.phone = ["Số điện thoại không hợp lệ (9–11 số)."];
       }
 
-      if (!blood_group) {
-        errors.blood_group = ["Vui lòng chọn nhóm máu."];
-      }
+      // ❌ Không còn validate blood_group (đã khoá, user không sửa được)
 
       if (Object.keys(errors).length > 0) {
         return res.status(422).json({
@@ -93,7 +91,7 @@ module.exports = {
         gender,
         phone,
         address,
-        blood_group,
+        // ❌ không đụng tới blood_group
         medical_history,
       });
 
