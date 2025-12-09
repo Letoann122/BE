@@ -38,6 +38,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("full", "expiring", "low", "critical"),
         defaultValue: "full",
       },
+      quality_note: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       created_at: DataTypes.DATE,
       updated_at: DataTypes.DATE,
     },

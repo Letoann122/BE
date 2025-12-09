@@ -1,4 +1,3 @@
-// controllers/doctor/BloodInventoryController.js
 "use strict";
 
 const {
@@ -10,14 +9,12 @@ const {
 } = require("../../models");
 const { Op } = require("sequelize");
 
-// helper: chuẩn hóa về 00:00 để so sánh theo ngày
 function normalizeDate(d) {
   const dt = new Date(d);
   dt.setHours(0, 0, 0, 0);
   return dt;
 }
 
-// ✅ helper ghi log transaction (NHẬN transaction)
 async function createInventoryTx(
   { inventoryId, userId, txType, units, reason, refDonationId = null },
   options = {}
@@ -28,7 +25,7 @@ async function createInventoryTx(
     {
       inventory_id: inventoryId,
       user_id: userId || null,
-      tx_type: txType, // 'IN' | 'OUT' | 'ADJUST' | 'EXPIRE'
+      tx_type: txType,
       units,
       reason,
       ref_donation_id: refDonationId,
@@ -39,7 +36,7 @@ async function createInventoryTx(
 }
 
 module.exports = {
-  // 🩸 Lấy danh sách tất cả lô máu
+  // GET ALL
   async getAll(req, res) {
     try {
       const list = await BloodInventory.findAll({
@@ -51,7 +48,6 @@ module.exports = {
 
       return res.json({ status: true, data: list });
     } catch (error) {
-      console.error("❌ Lỗi getAll blood-inventory:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi lấy danh sách kho máu",
@@ -60,11 +56,10 @@ module.exports = {
     }
   },
 
-  // 🔍 Lấy chi tiết 1 lô máu
+  // GET ONE
   async getOne(req, res) {
     try {
       const { id } = req.params;
-
       const batch = await BloodInventory.findByPk(id, {
         include: [
           { model: BloodType, as: "blood_type", attributes: ["abo", "rh"] },
@@ -72,9 +67,7 @@ module.exports = {
       });
 
       if (!batch) {
-        return res
-          .status(404)
-          .json({ status: false, message: "Không tìm thấy lô máu" });
+        return res.json({ status: false, message: "Không tìm thấy lô máu" });
       }
 
       return res.json({
@@ -83,7 +76,6 @@ module.exports = {
         data: batch,
       });
     } catch (error) {
-      console.error("❌ Lỗi getOne blood-inventory:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi lấy chi tiết lô máu",
@@ -92,7 +84,7 @@ module.exports = {
     }
   },
 
-  // ➕ Thêm mới (nhập kho thủ công, hospital_id có thể NULL)
+  // CREATE
   async create(req, res) {
     const t = await sequelize.transaction();
     try {
@@ -101,10 +93,19 @@ module.exports = {
 
       if (!blood_type_id || !units || !donation_date || !expiry_date) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
           message:
             "Vui lòng nhập đầy đủ nhóm máu, ngày nhập, hạn sử dụng và số lượng",
+        });
+      }
+
+      // Check số lượng <= 0
+      if (Number(units) <= 0) {
+        await t.rollback();
+        return res.json({
+          status: false,
+          message: "Số lượng túi máu phải lớn hơn 0",
         });
       }
 
@@ -114,21 +115,21 @@ module.exports = {
 
       if (donation < today) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
           message: "Ngày nhập không được nhỏ hơn ngày hiện tại",
         });
       }
       if (expiry < today) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
           message: "Hạn sử dụng không được nhỏ hơn ngày hiện tại",
         });
       }
       if (expiry < donation) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
           message: "Hạn sử dụng không được nhỏ hơn ngày nhập",
         });
@@ -175,7 +176,6 @@ module.exports = {
       });
     } catch (error) {
       await t.rollback();
-      console.error("❌ Lỗi create blood-inventory:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi thêm lô máu",
@@ -184,7 +184,7 @@ module.exports = {
     }
   },
 
-  // ✏️ Cập nhật
+  // UPDATE
   async update(req, res) {
     const t = await sequelize.transaction();
     try {
@@ -199,17 +199,24 @@ module.exports = {
 
       if (!batch) {
         await t.rollback();
-        return res
-          .status(404)
-          .json({ status: false, message: "Không tìm thấy lô máu" });
+        return res.json({ status: false, message: "Không tìm thấy lô máu" });
       }
 
       if (!blood_type_id || !units || !donation_date || !expiry_date) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
           message:
             "Vui lòng nhập đầy đủ nhóm máu, ngày nhập, hạn sử dụng và số lượng",
+        });
+      }
+
+      // Check số lượng <= 0
+      if (Number(units) <= 0) {
+        await t.rollback();
+        return res.json({
+          status: false,
+          message: "Số lượng túi máu phải lớn hơn 0",
         });
       }
 
@@ -219,28 +226,27 @@ module.exports = {
 
       if (donation < today) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
           message: "Ngày nhập không được nhỏ hơn ngày hiện tại",
         });
       }
       if (expiry < today) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
           message: "Hạn sử dụng không được nhỏ hơn ngày hiện tại",
         });
       }
       if (expiry < donation) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
           message: "Hạn sử dụng không được nhỏ hơn ngày nhập",
         });
       }
 
       const oldUnits = Number(batch.units || 0);
-
       const diffDays = (expiry - today) / (1000 * 3600 * 24);
       let status = "full";
       if (diffDays <= 0 || units < 5) status = "critical";
@@ -278,7 +284,6 @@ module.exports = {
       });
     } catch (error) {
       await t.rollback();
-      console.error("❌ Lỗi update blood-inventory:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi cập nhật lô máu",
@@ -287,7 +292,7 @@ module.exports = {
     }
   },
 
-  // ❌ Xóa
+  // DELETE
   async delete(req, res) {
     const t = await sequelize.transaction();
     try {
@@ -304,9 +309,7 @@ module.exports = {
 
       if (!batch) {
         await t.rollback();
-        return res
-          .status(404)
-          .json({ status: false, message: "Không tìm thấy lô máu" });
+        return res.json({ status: false, message: "Không tìm thấy lô máu" });
       }
 
       const label = batch.blood_type
@@ -331,7 +334,6 @@ module.exports = {
       return res.json({ status: true, message: "Xóa lô máu thành công" });
     } catch (error) {
       await t.rollback();
-      console.error("❌ Lỗi delete blood-inventory:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi xóa lô máu",
@@ -340,11 +342,10 @@ module.exports = {
     }
   },
 
-  // 🧭 Lọc
+  // FILTER
   async filter(req, res) {
     try {
       const { bloodType, status } = req.body;
-
       const whereClause = {};
       if (status && status !== "all") whereClause.status = status;
 
@@ -357,11 +358,10 @@ module.exports = {
         },
       ];
 
-      // ✅ FIX: chịu được "AB+" bị thành "AB " (space) + parse RH đúng
       if (bloodType && bloodType !== "all") {
-        const bt = String(bloodType).trim().replace(/ /g, "+"); // normalize space -> '+'
-        const abo = bt.replace(/[+\-\s]/g, "");                 // bỏ + - space
-        const rh = bt.includes("-") ? "-" : "+";                // ưu tiên '-' nếu có
+        const bt = String(bloodType).trim().replace(/ /g, "+");
+        const abo = bt.replace(/[+\-\s]/g, "");
+        const rh = bt.includes("-") ? "-" : "+";
 
         includeClause[0].where = {
           [Op.and]: [{ abo }, { rh }],
@@ -376,7 +376,6 @@ module.exports = {
 
       return res.json({ status: true, data: result });
     } catch (error) {
-      console.error("❌ Lỗi filter blood-inventory:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi lọc dữ liệu",
@@ -385,11 +384,10 @@ module.exports = {
     }
   },
 
-  // 🕒 Logs 1 lô (giữ như bạn đang dùng cho trang detail)
+  // LOGS BY BATCH
   async logsByBatch(req, res) {
     try {
       const { batch_id } = req.params;
-
       const logs = await InventoryTransaction.findAll({
         where: { inventory_id: batch_id },
         include: [{ model: User, attributes: ["full_name", "role"] }],
@@ -399,7 +397,6 @@ module.exports = {
       const mapped = logs.map((log) => {
         let icon = "bi bi-info-circle";
         let title = "Hoạt động";
-
         switch (log.tx_type) {
           case "IN":
             icon = "bi bi-box-arrow-in-down";
@@ -418,7 +415,6 @@ module.exports = {
             title = "Hết hạn";
             break;
         }
-
         return {
           icon,
           title,
@@ -434,7 +430,6 @@ module.exports = {
         data: mapped,
       });
     } catch (error) {
-      console.error("❌ Lỗi logsByBatch blood-inventory:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi lấy nhật ký lô máu",
@@ -443,76 +438,130 @@ module.exports = {
     }
   },
 
-  // 📜 Logs toàn kho (✅ map đúng format FE BloodStockLogView)
- // 📜 Logs toàn kho
-async logsAll(req, res) {
-  try {
-    const logs = await InventoryTransaction.findAll({
-      include: [{ model: User, attributes: ["full_name", "role"] }],
-      order: [["occurred_at", "DESC"]],
-    });
+  // LOGS ALL
+  async logsAll(req, res) {
+    try {
+      const logs = await InventoryTransaction.findAll({
+        include: [{ model: User, attributes: ["full_name", "role"] }],
+        order: [["occurred_at", "DESC"]],
+      });
 
-    const mapped = logs.map((log) => {
-      const mapAction = {
-        IN: "import",
-        OUT: "export",
-        ADJUST: "update",
-        EXPIRE: "expire",
-      };
+      const mapped = logs.map((log) => {
+        const mapAction = {
+          IN: "import",
+          OUT: "export",
+          ADJUST: "update",
+          EXPIRE: "expire",
+        };
+        const mapIcon = {
+          IN: "bi bi-box-arrow-in-down",
+          OUT: "bi bi-arrow-up-circle",
+          ADJUST: "bi bi-pencil-square",
+          EXPIRE: "bi bi-exclamation-triangle",
+        };
+        return {
+          id: log.id,
+          action: mapAction[log.tx_type] || "update",
+          icon: mapIcon[log.tx_type] || "bi bi-info-circle",
+          batch_id: log.inventory_id,
+          actor_name: log.User ? log.User.full_name : "Hệ thống",
+          actor_role: log.User ? log.User.role : "system",
+          actor_avatar: null,
+          time: log.occurred_at,
+          notes: log.reason || "",
+        };
+      });
 
-      const mapIcon = {
-        IN: "bi bi-box-arrow-in-down",
-        OUT: "bi bi-arrow-up-circle",
-        ADJUST: "bi bi-pencil-square",
-        EXPIRE: "bi bi-exclamation-triangle",
-      };
+      return res.json({
+        status: true,
+        message: "Lấy nhật ký kho máu thành công",
+        data: mapped,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Lỗi lấy nhật ký kho máu",
+        error: error.message,
+      });
+    }
+  },
 
-      return {
-        id: log.id,
-        action: mapAction[log.tx_type] || "update",
-        icon: mapIcon[log.tx_type] || "bi bi-info-circle",
-        batch_id: log.inventory_id,
-        actor_name: log.User ? log.User.full_name : "Hệ thống",
-        actor_role: log.User ? log.User.role : "system",
-        actor_avatar: null,
-        time: log.occurred_at,
-        notes: log.reason || "",
-      };
-    });
-
-    return res.json({
-      status: true,
-      message: "Lấy nhật ký kho máu thành công",
-      data: mapped,
-    });
-  } catch (error) {
-    console.error("❌ Lỗi logsAll blood-inventory:", error);
-    return res.status(500).json({
-      status: false,
-      message: "Lỗi lấy nhật ký kho máu",
-      error: error.message,
-    });
-  }
-},
-
-
-  // 🚚 Xuất túi máu: ưu tiên hạn gần nhất
+  // EXPORT
   async export(req, res) {
     const t = await sequelize.transaction();
     try {
-      const { blood_type_id, units, reason } = req.body;
+      const { blood_type_id, units, reason, inventory_id } = req.body;
       const authUser = req.user;
 
-      if (!blood_type_id || !units || Number(units) <= 0) {
+      // Kiểm tra số lượng
+      if (!units || Number(units) <= 0) {
         await t.rollback();
-        return res.status(400).json({
+        return res.json({
           status: false,
-          message: "Thiếu thông tin nhóm máu / số lượng",
+          message: "Số lượng xuất phải lớn hơn 0",
+        });
+      }
+
+      // Nếu truyền inventory_id -> xuất theo LÔ CỤ THỂ (dùng cho tiêu huỷ / xử lý 1 túi)
+      if (inventory_id) {
+        const batch = await BloodInventory.findByPk(inventory_id, {
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        if (!batch) {
+          await t.rollback();
+          return res.json({
+            status: false,
+            message: "Không tìm thấy lô máu cần xuất",
+          });
+        }
+
+        const currentUnits = Number(batch.units || 0);
+        const take = Number(units);
+
+        if (currentUnits <= 0 || take > currentUnits) {
+          await t.rollback();
+          return res.json({
+            status: false,
+            message: "Không đủ số lượng túi trong lô này để xuất",
+          });
+        }
+
+        const newUnits = currentUnits - take;
+
+        await batch.update({ units: newUnits }, { transaction: t });
+
+        await createInventoryTx(
+          {
+            inventoryId: batch.id,
+            userId: authUser?.userId,
+            txType: "OUT",
+            units: take,
+            reason:
+              reason ||
+              `Xuất ${take} túi từ lô id=${batch.id} (tiêu huỷ / sử dụng nội bộ)`,
+          },
+          { transaction: t }
+        );
+
+        await t.commit();
+        return res.json({
+          status: true,
+          message: "Xuất túi máu từ lô thành công",
+        });
+      }
+
+      // Nếu KHÔNG có inventory_id -> giữ nguyên cơ chế cũ: xuất theo nhóm máu
+      if (!blood_type_id) {
+        await t.rollback();
+        return res.json({
+          status: false,
+          message: "Thiếu thông tin nhóm máu hoặc lô máu để xuất",
         });
       }
 
       const today = new Date();
-
       const batches = await BloodInventory.findAll({
         where: {
           blood_type_id,
@@ -536,15 +585,12 @@ async logsAll(req, res) {
       }
 
       let remaining = Number(units);
-
       for (const batch of batches) {
         if (remaining <= 0) break;
-
         const take = Math.min(Number(batch.units), remaining);
         const newUnits = Number(batch.units) - take;
 
         await batch.update({ units: newUnits }, { transaction: t });
-
         await createInventoryTx(
           {
             inventoryId: batch.id,
@@ -557,7 +603,6 @@ async logsAll(req, res) {
           },
           { transaction: t }
         );
-
         remaining -= take;
       }
 
@@ -570,13 +615,9 @@ async logsAll(req, res) {
       }
 
       await t.commit();
-      return res.json({
-        status: true,
-        message: "Xuất túi máu thành công",
-      });
+      return res.json({ status: true, message: "Xuất túi máu thành công" });
     } catch (error) {
       await t.rollback();
-      console.error("❌ Lỗi export blood-inventory:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi xuất túi máu",

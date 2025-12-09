@@ -123,72 +123,72 @@ module.exports = {
           // donor
           donorAssoc
             ? {
-                association: donorAssoc,
-                attributes: ["full_name", "phone", "blood_group"],
-              }
+              association: donorAssoc,
+              attributes: ["full_name", "phone", "blood_group"],
+            }
             : {
-                model: User,
-                as: "donor",
-                attributes: ["full_name", "phone", "blood_group"],
-              },
+              model: User,
+              as: "donor",
+              attributes: ["full_name", "phone", "blood_group"],
+            },
 
           // site + hospital
           siteAssoc
             ? {
-                association: siteAssoc,
-                attributes: ["id", "name", "hospital_id"],
-                required: false,
-                include: hospitalAssoc
-                  ? [
-                      {
-                        association: hospitalAssoc,
-                        attributes: ["id", "name"],
-                        required: false,
-                      },
-                    ]
-                  : [
-                      {
-                        model: Hospital,
-                        attributes: ["id", "name"],
-                        required: false,
-                      },
-                    ],
-              }
+              association: siteAssoc,
+              attributes: ["id", "name", "hospital_id"],
+              required: false,
+              include: hospitalAssoc
+                ? [
+                  {
+                    association: hospitalAssoc,
+                    attributes: ["id", "name"],
+                    required: false,
+                  },
+                ]
+                : [
+                  {
+                    model: Hospital,
+                    attributes: ["id", "name"],
+                    required: false,
+                  },
+                ],
+            }
             : {
-                model: DonationSite,
-                as: "donation_site",
-                attributes: ["id", "name", "hospital_id"],
-                required: false,
-                include: hospitalAssoc
-                  ? [
-                      {
-                        association: hospitalAssoc,
-                        attributes: ["id", "name"],
-                        required: false,
-                      },
-                    ]
-                  : [
-                      {
-                        model: Hospital,
-                        attributes: ["id", "name"],
-                        required: false,
-                      },
-                    ],
-              },
+              model: DonationSite,
+              as: "donation_site",
+              attributes: ["id", "name", "hospital_id"],
+              required: false,
+              include: hospitalAssoc
+                ? [
+                  {
+                    association: hospitalAssoc,
+                    attributes: ["id", "name"],
+                    required: false,
+                  },
+                ]
+                : [
+                  {
+                    model: Hospital,
+                    attributes: ["id", "name"],
+                    required: false,
+                  },
+                ],
+            },
 
           // slot
           slotAssoc
             ? {
-                association: slotAssoc,
-                attributes: ["start_time", "end_time"],
-                required: false,
-              }
+              association: slotAssoc,
+              attributes: ["start_time", "end_time"],
+              required: false,
+            }
             : {
-                model: AppointmentSlot,
-                as: "slot",
-                attributes: ["start_time", "end_time"],
-                required: false,
-              },
+              model: AppointmentSlot,
+              as: "slot",
+              attributes: ["start_time", "end_time"],
+              required: false,
+            },
         ],
         order: [["scheduled_at", "ASC"]],
       });
@@ -233,6 +233,9 @@ module.exports = {
     }
   },
 
+  // =====================================================
+  // POST /doctor/donations/complete
+  // =====================================================
   // =====================================================
   // POST /doctor/donations/complete
   // =====================================================
@@ -288,18 +291,18 @@ module.exports = {
         include: [
           siteAssoc
             ? {
-                association: siteAssoc,
-                required: false,
-                include: hospitalAssoc
-                  ? [{ association: hospitalAssoc, required: false }]
-                  : [{ model: Hospital, required: false }],
-              }
+              association: siteAssoc,
+              required: false,
+              include: hospitalAssoc
+                ? [{ association: hospitalAssoc, required: false }]
+                : [{ model: Hospital, required: false }],
+            }
             : {
-                model: DonationSite,
-                as: "donation_site",
-                required: false,
-                include: [{ model: Hospital, required: false }],
-              },
+              model: DonationSite,
+              as: "donation_site",
+              required: false,
+              include: [{ model: Hospital, required: false }],
+            },
         ],
         lock: t.LOCK.UPDATE,
         transaction: t,
@@ -347,13 +350,14 @@ module.exports = {
       const site = getSite(appointment);
       const hospitalId = site?.hospital_id || null;
 
-      // ✅ chuẩn hoá bool cho screened_ok (nhận true/false, 1/0, "1"/"0")
+      // Chuẩn hoá boolean cho screened_ok
       const screenedOkBool =
         screened_ok === true ||
         screened_ok === 1 ||
         screened_ok === "1" ||
         screened_ok === "true";
 
+      // Tạo record donation
       const donation = await Donation.create(
         {
           appointment_id,
@@ -369,6 +373,7 @@ module.exports = {
         { transaction: t }
       );
 
+      // Ghi chú thêm vào appointment nếu có
       if (notes && notes.trim()) {
         appointment.notes = appointment.notes
           ? appointment.notes + "\n[Doctor note] " + notes.trim()
@@ -392,76 +397,71 @@ module.exports = {
         t
       );
 
-      // 2) chỉ auto nhập kho khi screened_ok = true
-      if (screenedOkBool) {
-        const units = 1;
+      // ============================================================
+      // 2) LUÔN tạo blood_inventory + transaction IN (units = 1)
+      //    - screened_ok = 1: máu đạt → quality_note = null
+      //    - screened_ok = 0: máu không đạt → quality_note = "Không đạt sàng lọc"
+      //      bác sĩ sẽ xuất túi này để tiêu huỷ
+      // ============================================================
+      const donationDate = normalizeDate(new Date(collected_at));
+      const expiryDate = normalizeDate(addDays(donationDate, 35));
 
-        const donationDate = normalizeDate(new Date(collected_at));
-        const expiryDate = normalizeDate(addDays(donationDate, 35));
+      const units = 1; // luôn là 1 túi, đạt hay không đạt
 
-        const inventory = await BloodInventory.create(
-          {
-            donation_id: donation.id,
-            hospital_id: hospitalId,
-            blood_type_id: bloodType.id,
-            units,
-            donation_date: donationDate,
-            expiry_date: expiryDate,
-            status: "full",
-          },
-          { transaction: t }
-        );
+      const inventory = await BloodInventory.create(
+        {
+          donation_id: donation.id,
+          hospital_id: hospitalId,
+          blood_type_id: bloodType.id,
+          units,
+          donation_date: donationDate,
+          expiry_date: expiryDate,
+          status: "full",
+          quality_note: screenedOkBool ? null : "Không đạt sàng lọc",
+        },
+        { transaction: t }
+      );
 
-        await createAudit(
-          {
-            userId: loggedUserId,
-            action: "AUTO_STOCK_IN",
-            entity: "blood_inventory",
-            entityId: inventory.id,
-            details: `Auto stock in from donation_completed: +${units} unit, donation_id=${donation.id}, blood_type=${abo}${rh}, expiry=${toDateStr(
-              expiryDate
-            )}`,
-          },
-          t
-        );
+      await createAudit(
+        {
+          userId: loggedUserId,
+          action: "AUTO_STOCK_IN",
+          entity: "blood_inventory",
+          entityId: inventory.id,
+          details: `inventory created: units=${units}, screened_ok=${screenedOkBool ? 1 : 0}, quality_note=${screenedOkBool ? "null" : "Không đạt sàng lọc"}`,
+        },
+        t
+      );
 
-        const tx = await InventoryTransaction.create(
-          {
-            inventory_id: inventory.id,
-            user_id: loggedUserId || null,
-            tx_type: "IN",
-            units,
-            reason: `Auto add from donation_completed (donation_id=${donation.id})`,
-            ref_donation_id: donation.id,
-            occurred_at: new Date(),
-          },
-          { transaction: t }
-        );
+      const tx = await InventoryTransaction.create(
+        {
+          inventory_id: inventory.id,
+          user_id: loggedUserId || null,
+          tx_type: "IN",
+          units,
+          reason: screenedOkBool
+            ? `Auto add from donation_completed (donation_id=${donation.id})`
+            : `Auto add (FAILED SCREENING) donation_id=${donation.id}`,
+          ref_donation_id: donation.id,
+          occurred_at: new Date(),
+        },
+        { transaction: t }
+      );
 
-        await createAudit(
-          {
-            userId: loggedUserId,
-            action: "AUTO_INVENTORY_TX_IN",
-            entity: "inventory_transactions",
-            entityId: tx.id,
-            details: `TX IN created: +${units} unit, inventory_id=${inventory.id}, donation_id=${donation.id}`,
-          },
-          t
-        );
-      } else {
-        await createAudit(
-          {
-            userId: loggedUserId,
-            action: "AUTO_STOCK_IN_SKIPPED",
-            entity: "donations",
-            entityId: donation.id,
-            details:
-              "screened_ok=0 => skip create blood_inventory & inventory_transactions",
-          },
-          t
-        );
-      }
+      await createAudit(
+        {
+          userId: loggedUserId,
+          action: "AUTO_INVENTORY_TX_IN",
+          entity: "inventory_transactions",
+          entityId: tx.id,
+          details: `TX IN created: +${units} unit (screened_ok=${screenedOkBool ? 1 : 0})`,
+        },
+        t
+      );
 
+      // ============================================================
+      // 3) COMMIT & gửi mail cảm ơn
+      // ============================================================
       await t.commit();
 
       // Send email (after commit)
@@ -498,5 +498,6 @@ module.exports = {
         error: error.message,
       });
     }
-  },
+  }
+
 };
