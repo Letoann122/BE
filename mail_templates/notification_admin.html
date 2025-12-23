@@ -4,81 +4,40 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Thông báo lịch hẹn hiến máu</title>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f6f6f6;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 600px;
-      background: #fff;
-      padding: 25px;
-      margin: auto;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-
-    h2 {
-      color: #D61C4E;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .content {
-      font-size: 16px;
-      line-height: 1.5;
-      color: #333;
-    }
-
-    .footer {
-      margin-top: 30px;
-      font-size: 13px;
-      text-align: center;
-      color: #888;
-    }
-
-    .code-box {
-      background: #f2f2f2;
-      padding: 10px 14px;
-      border-radius: 6px;
-      margin-top: 10px;
-      font-weight: bold;
-      width: max-content;
-    }
-  </style>
 </head>
 
-<body>
-  <div class="container">
-    <h2>📢 THÔNG BÁO LỊCH HẸN</h2>
+<body style="font-family: Arial, sans-serif; background:#f6f6f6; padding:20px;">
+  <div style="max-width:600px; background:#fff; padding:25px; margin:auto; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
 
-    <div class="content">
-      <p>Xin chào <b>{{donor_name}}</b>,</p>
+    <h2 style="color:#D61C4E; text-align:center;">
+      📢 THÔNG BÁO LỊCH HẸN
+    </h2>
 
-      <p>Bạn nhận được thông báo mới liên quan đến lịch hẹn hiến máu của mình.</p>
+    <p>Xin chào <b>{{donor_name}}</b>,</p>
 
-      <p><b>Mã lịch hẹn:</b></p>
-      <div class="code-box">
-        {{appointment_code}}
-      </div>
+    <p>Bạn nhận được thông báo mới liên quan đến lịch hẹn hiến máu của mình.</p>
 
-      <p style="margin-top: 15px;">
-        <b>Nội dung:</b><br />
-        {{message}}
-      </p>
-
-      <p>Vui lòng kiểm tra lịch hẹn của bạn để cập nhật thông tin mới nhất.</p>
-
-      <p>Trân trọng,<br />
-        <b>Hệ thống Smart Blood Donation System</b>
-      </p>
+    <p><b>Mã lịch hẹn:</b></p>
+    <div style="background:#f2f2f2; padding:10px 14px; border-radius:6px; font-weight:bold; width:max-content;">
+      {{appointment_code}}
     </div>
 
-    <div class="footer">
-      Đây là email tự động, vui lòng không phản hồi lại email này.
+    <p style="margin-top:15px;">
+      <b>Nội dung:</b><br />
+      {{message}}
+    </p>
+
+    <p>
+      Vui lòng kiểm tra lịch hẹn của bạn để cập nhật thông tin mới nhất.
+    </p>
+
+    <p>
+      Trân trọng,<br />
+      <b>Hệ thống Smart Blood Donation System</b>
+    </p>
+
+    <div style="margin-top:30px; font-size:13px; text-align:center; color:#888;">
+      Đây là email tự động, vui lòng không phản hồi.
     </div>
   </div>
 </body>

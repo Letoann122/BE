@@ -258,7 +258,7 @@ module.exports = {
 
       return res.json({
         status: true,
-        message: "Đăng ký chiến dịch thành công! Vui lòng chờ Admin duyệt.",
+        message: "Đăng ký chiến dịch thành công! Vui lòng chờ xét duyệt.",
         data: created,
       });
     } catch (err) {
