@@ -439,6 +439,7 @@ module.exports = {
           the_tich: mailData.the_tich,
           ghi_chu: mailData.ghi_chu,
           campaign_title: mailData.campaign_title,
+          year: new Date().getFullYear(),
         },
         scheduled_at: new Date(),
       });
@@ -563,6 +564,7 @@ module.exports = {
           rejected_reason: mailData.rejected_reason,
           ghi_chu: mailData.ghi_chu,
           campaign_title: mailData.campaign_title,
+          year: new Date().getFullYear(),
         },
         scheduled_at: new Date(),
       });
