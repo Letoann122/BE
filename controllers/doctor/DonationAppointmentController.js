@@ -142,17 +142,26 @@ module.exports = {
   // GET /doctor/donation-appointments
   async index(req, res) {
     try {
-      const { appointment_code, date } = req.query;
+      const { appointment_code, date, from_date, to_date } = req.query;
 
       const where = { status: "REQUESTED" };
       if (appointment_code) where.appointment_code = appointment_code.trim();
 
-      if (date) {
+      // ƯU TIÊN filter theo khoảng ngày nếu có
+      if (from_date || to_date) {
+        const start = from_date
+          ? new Date(`${from_date} 00:00:00`)
+          : new Date("1970-01-01 00:00:00");
+        const end = to_date
+          ? new Date(`${to_date} 23:59:59`)
+          : new Date("9999-12-31 23:59:59");
+        where.scheduled_at = { [Op.between]: [start, end] };
+      } else if (date) {
+        // hỗ trợ backward: filter đúng 1 ngày
         const start = new Date(`${date} 00:00:00`);
         const end = new Date(`${date} 23:59:59`);
         where.scheduled_at = { [Op.between]: [start, end] };
       }
-
       const rows = await Appointment.findAll({
         where,
         include: [
@@ -430,6 +439,7 @@ module.exports = {
           the_tich: mailData.the_tich,
           ghi_chu: mailData.ghi_chu,
           campaign_title: mailData.campaign_title,
+          year: new Date().getFullYear(),
         },
         scheduled_at: new Date(),
       });
@@ -554,6 +564,7 @@ module.exports = {
           rejected_reason: mailData.rejected_reason,
           ghi_chu: mailData.ghi_chu,
           campaign_title: mailData.campaign_title,
+          year: new Date().getFullYear(),
         },
         scheduled_at: new Date(),
       });

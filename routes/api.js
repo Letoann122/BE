@@ -56,6 +56,7 @@ const DashboardDoctorController = require("../controllers/doctor/DashboardDoctor
 const ReportController = require("../controllers/doctor/ReportController");
 const BloodInventoryDashboardController = require("../controllers/admin/BloodInventoryDashboardController");
 const AdminNewsController = require("../controllers/admin/AdminNewsController");
+const ContactController = require("../controllers/donor/ContactController");
 
 // ==================== AUTH ====================
 router.post(
@@ -70,6 +71,7 @@ router.get("/logout", LogoutController.logout);
 router.get("/activate/:token", ActivateController.activate);
 router.post("/forgot-password", ForgotPasswordController.forgotPassword);
 router.post("/reset-password", ResetPasswordController.resetPassword);
+router.post("/contact", ContactController.sendContact);
 
 // ==================== PUBLIC ====================
 router.get("/news", NewsController.getAll);
@@ -119,7 +121,7 @@ doctorRouter.post("/blood-inventory/export", BloodInventoryController.export);
 // ✅ logs đặt trước :id
 doctorRouter.get("/blood-inventory/logs", BloodInventoryController.logsAll);
 doctorRouter.get("/blood-inventory/logs/:batch_id", BloodInventoryController.logsByBatch);
-
+//test
 // :id để cuối cùng trong nhóm GET
 doctorRouter.get("/blood-inventory/:id", BloodInventoryController.getOne);
 doctorRouter.put("/blood-inventory/:id", BloodInventoryController.update);

@@ -15,6 +15,7 @@ module.exports = {
         preferred_volume_ml,
         notes,
         time_slot,
+        campaign_id, // hỗ trợ campaign nếu có
       } = req.validated;
 
       const scheduledDate = new Date(scheduled_at);
@@ -23,16 +24,13 @@ module.exports = {
       if (scheduledDate < now) {
         return res.json({
           status: false,
-          message:
-            "Khung giờ bạn chọn đã trôi qua. Vui lòng chọn thời gian khác!",
+          message: "Khung giờ bạn chọn đã trôi qua. Vui lòng chọn thời gian khác!",
         });
       }
 
+      // Kiểm tra lần hiến trước
       const lastDonation = await Appointment.findOne({
-        where: {
-          donor_id,
-          status: "COMPLETED",
-        },
+        where: { donor_id, status: "COMPLETED" },
         order: [["scheduled_at", "DESC"]],
       });
 
@@ -50,11 +48,8 @@ module.exports = {
         }
       }
 
-      const sameDay = new Date(
-        scheduledDate.getFullYear(),
-        scheduledDate.getMonth(),
-        scheduledDate.getDate()
-      );
+      // Không được đặt 2 lịch trong cùng 1 ngày
+      const sameDay = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
       const nextDay = new Date(sameDay);
       nextDay.setDate(nextDay.getDate() + 1);
 
@@ -62,9 +57,7 @@ module.exports = {
         where: {
           donor_id,
           scheduled_at: { [Op.gte]: sameDay, [Op.lt]: nextDay },
-          status: {
-            [Op.in]: ["REQUESTED", "APPROVED", "BOOKED", "COMPLETED"],
-          },
+          status: { [Op.in]: ["REQUESTED", "APPROVED", "BOOKED", "COMPLETED"] },
         },
       });
 
@@ -75,7 +68,28 @@ module.exports = {
         });
       }
 
+      // =======================================
+      // 🔥 Generate Code: HM (hiến máu), CD (chiến dịch)
+      // =======================================
+
+      const prefix = campaign_id ? "CD" : "HM";
+
+      // Lấy AUTO_INCREMENT kế tiếp
+      const [next] = await Appointment.sequelize.query(`
+        SELECT AUTO_INCREMENT AS nextId
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'appointments'
+      `);
+
+      const nextId = next[0]?.nextId || 1;
+
+      const appointment_code = prefix + String(nextId).padStart(6, "0");
+
+      // =======================================
+
       const newAppt = await Appointment.create({
+        appointment_code,
         donor_id,
         donation_site_id,
         appointment_slot_id,
@@ -83,9 +97,11 @@ module.exports = {
         preferred_volume_ml,
         notes,
         time_slot,
+        campaign_id: campaign_id || null,
         status: "REQUESTED",
       });
 
+      // Gửi email nhắc lịch
       const sendAt = new Date(scheduledDate);
       sendAt.setDate(sendAt.getDate() - 1);
 
@@ -104,11 +120,11 @@ module.exports = {
 
       return res.status(200).json({
         status: true,
-        message:
-          "Đặt lịch hiến máu thành công! Vui lòng chờ bác sĩ duyệt.",
+        message: "Đặt lịch hiến máu thành công! Vui lòng chờ bác sĩ duyệt.",
         data: newAppt,
       });
     } catch (error) {
+      console.error("CREATE APPOINTMENT ERROR:", error);
       return res.status(500).json({
         status: false,
         message: "Lỗi máy chủ khi tạo lịch hẹn!",
@@ -123,21 +139,14 @@ module.exports = {
       const rows = await Appointment.findAll({
         where: { donor_id },
         include: [
-          {
-            model: DonationSite,
-            as: "donation_site",
-          },
-          {
-            model: Campaign,
-            as: "campaign",
-          },
+          { model: DonationSite, as: "donation_site" },
+          { model: Campaign, as: "campaign" },
         ],
         order: [["scheduled_at", "DESC"]],
       });
 
       const data = rows.map((appt) => {
         const plain = appt.toJSON();
-
         if (!plain.donation_site && plain.campaign && plain.campaign.location) {
           plain.donation_site = {
             id: null,
@@ -145,7 +154,6 @@ module.exports = {
             address: plain.campaign.location,
           };
         }
-
         return plain;
       });
 
@@ -163,9 +171,7 @@ module.exports = {
       const donor_id = req.user?.userId || req.user?.id;
       const { id } = req.params;
 
-      const appt = await Appointment.findOne({
-        where: { id, donor_id },
-      });
+      const appt = await Appointment.findOne({ where: { id, donor_id } });
 
       if (!appt) {
         return res.status(404).json({

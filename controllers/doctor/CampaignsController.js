@@ -153,7 +153,7 @@ module.exports = {
 
       const newCamp = await Campaign.create(payload);
 
-      return res.json({ status: true, message: "Tạo chiến dịch thành công! (Chờ Admin duyệt)", data: newCamp });
+      return res.json({ status: true, message: "Tạo chiến dịch thành công!", data: newCamp });
     } catch (err) {
       console.error("createCampaign error:", err);
       return res.status(500).json({ status: false, message: err.message });
